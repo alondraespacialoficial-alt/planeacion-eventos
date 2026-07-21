@@ -974,12 +974,35 @@ export const AppService = {
 
   // --- VENDORS SERVICES ---
   async getVendors(clientEmail: string): Promise<VendorItem[]> {
+    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
+      try {
+        let query = supabase.from('vendors').select('*');
+        if (clientEmail) query = query.eq('client_email', clientEmail);
+        const { data, error } = await query.order('created_at', { ascending: false });
+        if (error) throw error;
+        return (data || []) as VendorItem[];
+      } catch (err) {
+        console.error('Error fetching vendors from Supabase, trying fallback...', err);
+      }
+    }
+
     const all = LocalStorageDB.getVendors();
     if (!clientEmail) return all;
     return all.filter(v => v.client_email.toLowerCase() === clientEmail.toLowerCase());
   },
 
   async addVendor(vendor: Omit<VendorItem, 'id' | 'created_at'>): Promise<VendorItem> {
+    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
+      try {
+        const payload = { ...vendor, id: 'ven-' + Math.random().toString(36).substr(2, 9) };
+        const { data, error } = await supabase.from('vendors').insert([payload]).select().single();
+        if (error) throw error;
+        return data as VendorItem;
+      } catch (err) {
+        console.error('Error adding vendor to Supabase, using local fallback', err);
+      }
+    }
+
     const newVendor: VendorItem = {
       ...vendor,
       id: 'ven-' + Math.random().toString(36).substr(2, 9),
@@ -992,6 +1015,16 @@ export const AppService = {
   },
 
   async updateVendor(id: string, updatedFields: Partial<VendorItem>): Promise<VendorItem | null> {
+    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
+      try {
+        const { data, error } = await supabase.from('vendors').update(updatedFields).eq('id', id).select().maybeSingle();
+        if (error) throw error;
+        return data as VendorItem | null;
+      } catch (err) {
+        console.error('Error updating vendor in Supabase, using local fallback', err);
+      }
+    }
+
     const all = LocalStorageDB.getVendors();
     const idx = all.findIndex(v => v.id === id);
     if (idx !== -1) {
@@ -1003,6 +1036,16 @@ export const AppService = {
   },
 
   async deleteVendor(id: string): Promise<boolean> {
+    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
+      try {
+        const { error } = await supabase.from('vendors').delete().eq('id', id);
+        if (error) throw error;
+        return true;
+      } catch (err) {
+        console.error('Error deleting vendor in Supabase, using local fallback', err);
+      }
+    }
+
     const all = LocalStorageDB.getVendors();
     const filtered = all.filter(v => v.id !== id);
     LocalStorageDB.saveVendors(filtered);
@@ -1509,6 +1552,22 @@ CREATE TABLE IF NOT EXISTS public.payment_receipts (
     notes TEXT
 );
 
+-- 1.10. Create VENDORS Table
+-- Tracks external vendors/providers (florista, foto, pastel, dj, etc.) hired by a client
+-- for their event. Clients manage only their own rows; admins/super_admins see all.
+CREATE TABLE IF NOT EXISTS public.vendors (
+    id TEXT PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    event_id TEXT,
+    client_email TEXT NOT NULL,
+    category TEXT NOT NULL,
+    vendor_name TEXT NOT NULL,
+    contact_phone TEXT NOT NULL,
+    status TEXT CHECK (status IN ('contratado', 'en_proceso', 'cotizando', 'pendiente')) DEFAULT 'pendiente' NOT NULL,
+    amount_agreed NUMERIC,
+    notes TEXT
+);
+
 -- ==========================================
 -- 2. Seed Initial Landing Configuration
 -- ==========================================
@@ -1581,6 +1640,7 @@ ALTER TABLE public.landing_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_allowlist ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_receipts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vendors ENABLE ROW LEVEL SECURITY;
 
 -- ==========================================
 -- 4. Create Security Policies (RLS Rules)
@@ -1712,6 +1772,17 @@ CREATE POLICY "Only super admin updates payment receipts" ON public.payment_rece
 DROP POLICY IF EXISTS "Only super admin deletes payment receipts" ON public.payment_receipts;
 CREATE POLICY "Only super admin deletes payment receipts" ON public.payment_receipts
     FOR DELETE USING (public.is_super_admin());
+
+-- 4.10. Policies for VENDORS
+-- Clients manage (read/insert/update/delete) only their own vendor rows; admins/super_admins manage all.
+DROP POLICY IF EXISTS "Clients manage own vendors" ON public.vendors;
+CREATE POLICY "Clients manage own vendors" ON public.vendors
+    FOR ALL USING (
+        auth.jwt() ->> 'email' = client_email OR public.is_admin()
+    )
+    WITH CHECK (
+        auth.jwt() ->> 'email' = client_email OR public.is_admin()
+    );
 
 
 -- ==========================================
