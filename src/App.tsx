@@ -119,7 +119,7 @@ export default function App() {
         return <LoginPage onLoginSuccess={handleLoginSuccess} onNavigate={handleNavigate} />;
       }
       
-      if (currentUser.role === 'admin') {
+      if (currentUser.role === 'admin' || currentUser.role === 'super_admin') {
         return (
           <AdminDashboard 
             currentUser={currentUser} 

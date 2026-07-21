@@ -44,9 +44,11 @@ import {
   Eye,
   XCircle,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  ShieldCheck,
+  UserCog
 } from 'lucide-react';
-import { Event, UserSession, Service, Lead, Quote, QuoteItem, LandingConfig, PaymentReceipt } from '../types';
+import { Event, UserSession, Service, Lead, Quote, QuoteItem, LandingConfig, PaymentReceipt, UserProfile } from '../types';
 import { AppService, isSupabaseConfigured, SUPABASE_SQL_BLUEPRINT } from '../lib/supabase';
 import { generateQuotePdf } from '../lib/pdfGenerator';
 
@@ -57,8 +59,10 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ currentUser, onLogout, onNavigate }: AdminDashboardProps) {
-  // Tabs State: 'cards' (Events), 'quotes', 'payments', 'leads', 'services', 'config'
-  const [activeTab, setActiveTab] = useState<'cards' | 'quotes' | 'payments' | 'leads' | 'services' | 'config'>('cards');
+  const isSuperAdmin = currentUser.role === 'super_admin';
+
+  // Tabs State: 'cards' (Events), 'quotes', 'payments', 'leads', 'services', 'config', 'access'
+  const [activeTab, setActiveTab] = useState<'cards' | 'quotes' | 'payments' | 'leads' | 'services' | 'config' | 'access'>('cards');
 
   const [loading, setLoading] = useState(true);
 
@@ -84,6 +88,12 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   // SQL Schema reference viewer
   const [showSqlGuide, setShowSqlGuide] = useState(false);
   const [sqlCopied, setSqlCopied] = useState(false);
+
+  // Access control state (Super Admin only)
+  const [allowlist, setAllowlist] = useState<string[]>([]);
+  const [userProfiles, setUserProfiles] = useState<UserProfile[]>([]);
+  const [newAllowlistEmail, setNewAllowlistEmail] = useState('');
+  const [accessActionLoading, setAccessActionLoading] = useState(false);
 
   // 1. =========================================================
   // MODAL / FORM STATE FOR DIGITAL CARDS (EVENTS)
@@ -190,6 +200,73 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     }
     loadAllAdminData();
   }, []);
+
+  // Load access-control data (allowlist + user profiles) only for super_admin
+  const loadAccessData = async () => {
+    if (!isSuperAdmin) return;
+    try {
+      const [loadedAllowlist, loadedProfiles] = await Promise.all([
+        AppService.getAdminAllowlist(),
+        AppService.listUserProfiles()
+      ]);
+      setAllowlist(loadedAllowlist);
+      setUserProfiles(loadedProfiles);
+    } catch (err) {
+      console.error('Error loading access control data', err);
+    }
+  };
+
+  useEffect(() => {
+    if (isSuperAdmin) {
+      loadAccessData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuperAdmin]);
+
+  const handleAddAllowlistEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = newAllowlistEmail.trim().toLowerCase();
+    if (!email) return;
+    setAccessActionLoading(true);
+    try {
+      const { success, error } = await AppService.addToAdminAllowlist(email);
+      if (success) {
+        showToast('Correo autorizado. Cuando esa persona cree su cuenta, obtendrá el rol de Administrador automáticamente.', 'success');
+        setNewAllowlistEmail('');
+        await loadAccessData();
+      } else {
+        showToast(error || 'No se pudo autorizar el correo.', 'error');
+      }
+    } finally {
+      setAccessActionLoading(false);
+    }
+  };
+
+  const handleRemoveAllowlistEmail = async (email: string) => {
+    setAccessActionLoading(true);
+    try {
+      await AppService.removeFromAdminAllowlist(email);
+      showToast('Autorización removida.', 'info');
+      await loadAccessData();
+    } finally {
+      setAccessActionLoading(false);
+    }
+  };
+
+  const handleChangeUserRole = async (profile: UserProfile, role: 'admin' | 'client') => {
+    setAccessActionLoading(true);
+    try {
+      const { success, error } = await AppService.updateUserRole(profile.id, role);
+      if (success) {
+        showToast(`${profile.email} ahora tiene el rol de ${role === 'admin' ? 'Administrador' : 'Cliente'}.`, 'success');
+        await loadAccessData();
+      } else {
+        showToast(error || 'No se pudo actualizar el rol.', 'error');
+      }
+    } finally {
+      setAccessActionLoading(false);
+    }
+  };
 
   // Handler for Admin Supremo verifying/updating payment receipt status
   const handleUpdatePaymentStatus = async (paymentId: string, status: 'verified' | 'rejected' | 'pending', notes?: string) => {
@@ -751,6 +828,15 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
             <Settings className="w-3.5 h-3.5" />
             Personalizar Landing
           </button>
+          {isSuperAdmin && (
+            <button 
+              onClick={() => setActiveTab('access')}
+              className={`pb-1 border-b-2 transition-all flex items-center gap-1.5 ${activeTab === 'access' ? 'border-amber-500 text-amber-500' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Gestión de Accesos
+            </button>
+          )}
         </div>
       </div>
 
@@ -1711,6 +1797,113 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                 </button>
               </div>
             </form>
+          </div>
+        )}
+
+        {activeTab === 'access' && isSuperAdmin && (
+          <div className="space-y-8 max-w-4xl pb-12">
+            <div>
+              <h3 className="font-serif text-2xl text-white font-medium">Gestión de Accesos</h3>
+              <p className="text-xs text-gray-500 leading-relaxed max-w-2xl">
+                Los <span className="text-amber-500">clientes</span> crean su propia cuenta libremente desde la pantalla de inicio de sesión (pestaña "Crear cuenta").
+                Los <span className="text-amber-500">administradores</span> nunca se auto-asignan el rol por su cuenta: primero autoriza aquí su correo,
+                y cuando esa persona se registre con ese mismo correo, obtendrá el rol de Administrador automáticamente. El rol de{' '}
+                <span className="text-amber-500">Super Admin</span> solo se otorga manualmente desde la consola SQL de Supabase.
+              </p>
+            </div>
+
+            {/* Allowlist Manager */}
+            <div className="bg-[#0d0e12] border border-gray-800 rounded-xl p-6 space-y-4">
+              <h4 className="text-[11px] font-mono font-bold text-amber-500 uppercase tracking-widest flex items-center gap-2">
+                <UserCog className="w-3.5 h-3.5" />
+                Autorizar Nuevos Administradores
+              </h4>
+              <form onSubmit={handleAddAllowlistEmail} className="flex gap-3">
+                <input
+                  type="email"
+                  required
+                  placeholder="correo@equipo.com"
+                  value={newAllowlistEmail}
+                  onChange={(e) => setNewAllowlistEmail(e.target.value)}
+                  className="flex-1 bg-black/40 border border-gray-800 rounded-lg p-3 text-xs text-white focus:outline-none focus:border-amber-500"
+                />
+                <button
+                  type="submit"
+                  disabled={accessActionLoading}
+                  className="px-5 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-mono text-xs font-bold tracking-widest transition-colors disabled:opacity-50"
+                >
+                  AUTORIZAR
+                </button>
+              </form>
+
+              {allowlist.length > 0 ? (
+                <div className="space-y-2 pt-2">
+                  {allowlist.map((email) => (
+                    <div key={email} className="flex items-center justify-between bg-black/30 border border-gray-800 rounded-lg px-4 py-2.5">
+                      <span className="text-xs text-gray-300 font-mono">{email}</span>
+                      <button
+                        onClick={() => handleRemoveAllowlistEmail(email)}
+                        disabled={accessActionLoading}
+                        className="text-red-400 hover:text-red-300 text-[10px] font-mono uppercase tracking-widest disabled:opacity-50"
+                      >
+                        Revocar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[11px] text-gray-500 italic">No hay correos pendientes de autorización.</p>
+              )}
+            </div>
+
+            {/* Existing Users & Roles */}
+            <div className="bg-[#0d0e12] border border-gray-800 rounded-xl p-6 space-y-4">
+              <h4 className="text-[11px] font-mono font-bold text-amber-500 uppercase tracking-widest flex items-center gap-2">
+                <Users className="w-3.5 h-3.5" />
+                Usuarios Registrados ({userProfiles.length})
+              </h4>
+              <div className="space-y-2">
+                {userProfiles.map((profile) => (
+                  <div key={profile.id} className="flex items-center justify-between bg-black/30 border border-gray-800 rounded-lg px-4 py-3 gap-4">
+                    <div className="min-w-0">
+                      <p className="text-xs text-white font-medium truncate">{profile.name || profile.email}</p>
+                      <p className="text-[10px] text-gray-500 font-mono truncate">{profile.email}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`px-2 py-1 rounded-full text-[9px] font-mono font-bold uppercase tracking-widest ${
+                        profile.role === 'super_admin' ? 'bg-purple-500/15 text-purple-400' :
+                        profile.role === 'admin' ? 'bg-amber-500/15 text-amber-400' :
+                        'bg-gray-500/15 text-gray-400'
+                      }`}>
+                        {profile.role === 'super_admin' ? 'Super Admin' : profile.role === 'admin' ? 'Admin' : 'Cliente'}
+                      </span>
+                      {profile.role !== 'super_admin' && profile.id !== currentUser.id && (
+                        profile.role === 'admin' ? (
+                          <button
+                            onClick={() => handleChangeUserRole(profile, 'client')}
+                            disabled={accessActionLoading}
+                            className="text-[9px] font-mono uppercase tracking-widest text-gray-400 hover:text-red-400 disabled:opacity-50"
+                          >
+                            Quitar Admin
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleChangeUserRole(profile, 'admin')}
+                            disabled={accessActionLoading}
+                            className="text-[9px] font-mono uppercase tracking-widest text-gray-400 hover:text-amber-400 disabled:opacity-50"
+                          >
+                            Hacer Admin
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {userProfiles.length === 0 && (
+                  <p className="text-[11px] text-gray-500 italic">Aún no hay usuarios registrados en Supabase.</p>
+                )}
+              </div>
+            </div>
           </div>
         )}
 

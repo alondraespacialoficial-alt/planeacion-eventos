@@ -71,8 +71,16 @@ export interface VendorItem {
 export interface UserSession {
   id: string;
   email: string;
-  role: 'admin' | 'client';
+  role: 'super_admin' | 'admin' | 'client';
   name: string;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  role: 'super_admin' | 'admin' | 'client';
+  created_at?: string;
 }
 
 export interface Service {

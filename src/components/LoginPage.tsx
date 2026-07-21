@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Lock, Mail, Sparkles, ArrowLeft, Eye, EyeOff, ShieldCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Lock, Mail, Sparkles, ArrowLeft, Eye, EyeOff, ShieldCheck, AlertCircle, CheckCircle2, User, UserPlus } from 'lucide-react';
 import { AppService, isSupabaseConfigured, supabaseTablesExist } from '../lib/supabase';
 import { UserSession } from '../types';
 
@@ -15,8 +15,11 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ onLoginSuccess, onNavigate }: LoginPageProps) {
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +93,41 @@ export default function LoginPage({ onLoginSuccess, onNavigate }: LoginPageProps
     }
   };
 
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!name.trim()) {
+      setError('Ingresa tu nombre completo.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Las contraseñas no coinciden.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { success, error: signUpError } = await AppService.signUp(email.trim().toLowerCase(), password, name.trim());
+      if (signUpError) {
+        setError(signUpError);
+      } else if (success) {
+        setMode('login');
+        setPassword('');
+        setConfirmPassword('');
+        setInfoMessage('Cuenta creada correctamente. Si tu proyecto de Supabase requiere confirmación por correo, revisa tu bandeja antes de iniciar sesión.');
+      }
+    } catch (err: any) {
+      setError('Ocurrió un error inesperado al crear tu cuenta.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#090a0d] text-gray-200 font-sans flex items-center justify-center p-6 relative">
       {/* Background decorations */}
@@ -133,7 +171,27 @@ export default function LoginPage({ onLoginSuccess, onNavigate }: LoginPageProps
             <p className="text-[10px] font-mono tracking-wider text-gray-500 mt-1">ORGANIZADORES & CLIENTES</p>
           </div>
 
-          {showSecretDoor && (
+          {/* Login / Signup mode toggle */}
+          <div className="flex mb-6 rounded-xl border border-gray-800 bg-black/40 p-1">
+            <button
+              type="button"
+              onClick={() => { setMode('login'); setError(null); }}
+              className={`flex-1 py-2.5 rounded-lg text-[10px] font-mono tracking-widest transition-all cursor-pointer ${mode === 'login' ? 'bg-amber-500 text-black font-bold' : 'text-gray-400 hover:text-white'}`}
+              id="btn-mode-login"
+            >
+              INICIAR SESIÓN
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode('signup'); setError(null); }}
+              className={`flex-1 py-2.5 rounded-lg text-[10px] font-mono tracking-widest transition-all cursor-pointer ${mode === 'signup' ? 'bg-amber-500 text-black font-bold' : 'text-gray-400 hover:text-white'}`}
+              id="btn-mode-signup"
+            >
+              CREAR CUENTA
+            </button>
+          </div>
+
+          {showSecretDoor && mode === 'login' && (
             <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/35 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-amber-400 font-mono tracking-widest font-semibold flex items-center gap-1">
@@ -192,7 +250,27 @@ export default function LoginPage({ onLoginSuccess, onNavigate }: LoginPageProps
           )}
 
           {/* Auth form */}
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={mode === 'login' ? handleLogin : handleSignUp} className="space-y-5">
+            {mode === 'signup' && (
+              <div>
+                <label htmlFor="signup-name" className="block text-[10px] font-mono tracking-widest text-gray-400 uppercase mb-2">NOMBRE COMPLETO</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-600">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <input
+                    id="signup-name"
+                    type="text"
+                    required
+                    placeholder="Ej. Alejandra Gómez"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-[#13151a] border border-gray-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white placeholder-gray-700 focus:outline-none focus:border-amber-500/50 transition-colors"
+                  />
+                </div>
+              </div>
+            )}
+
             <div>
               <label htmlFor="login-email" className="block text-[10px] font-mono tracking-widest text-gray-400 uppercase mb-2">CORREO ELECTRÓNICO</label>
               <div className="relative">
@@ -236,6 +314,26 @@ export default function LoginPage({ onLoginSuccess, onNavigate }: LoginPageProps
               </div>
             </div>
 
+            {mode === 'signup' && (
+              <div>
+                <label htmlFor="signup-confirm-password" className="block text-[10px] font-mono tracking-widest text-gray-400 uppercase mb-2">CONFIRMAR CONTRASEÑA</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-600">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <input
+                    id="signup-confirm-password"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    placeholder="••••••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full bg-[#13151a] border border-gray-800 rounded-xl pl-10 pr-10 py-3 text-xs text-white placeholder-gray-700 focus:outline-none focus:border-amber-500/50 transition-colors"
+                  />
+                </div>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
@@ -244,32 +342,39 @@ export default function LoginPage({ onLoginSuccess, onNavigate }: LoginPageProps
             >
               {loading ? (
                 <span className="h-4 w-4 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
-              ) : (
+              ) : mode === 'login' ? (
                 <>
                   <ShieldCheck className="w-4 h-4 text-black" />
                   INICIAR SESIÓN SEGURO
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4 text-black" />
+                  CREAR MI CUENTA
                 </>
               )}
             </button>
           </form>
 
           {/* Quick-fill section to streamline the demo evaluation */}
-          <div className="mt-8 pt-6 border-t border-gray-900 text-center">
-            <p className="text-[9px] font-mono text-gray-500 tracking-wider uppercase mb-3.5">ACCESO DE CLIENTES</p>
-            <div className="flex justify-center">
-              <button
-                type="button"
-                onClick={() => handleQuickFill('client')}
-                className="w-full py-2.5 px-3 rounded-lg border border-gray-800 bg-gray-950/60 hover:bg-amber-500/5 hover:border-amber-500/30 text-[10px] font-mono tracking-wider text-amber-400 transition-all cursor-pointer"
-                id="btn-quickfill-client"
-              >
-                ENTRAR COMO CLIENTE / HOST
-              </button>
+          {mode === 'login' && (
+            <div className="mt-8 pt-6 border-t border-gray-900 text-center">
+              <p className="text-[9px] font-mono text-gray-500 tracking-wider uppercase mb-3.5">ACCESO DE CLIENTES</p>
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => handleQuickFill('client')}
+                  className="w-full py-2.5 px-3 rounded-lg border border-gray-800 bg-gray-950/60 hover:bg-amber-500/5 hover:border-amber-500/30 text-[10px] font-mono tracking-wider text-amber-400 transition-all cursor-pointer"
+                  id="btn-quickfill-client"
+                >
+                  ENTRAR COMO CLIENTE / HOST
+                </button>
+              </div>
+              <p className="text-[9px] text-gray-600 font-light font-sans mt-3 text-center leading-relaxed">
+                *En el modo Demo local, cualquier contraseña de tu elección es aceptada.
+              </p>
             </div>
-            <p className="text-[9px] text-gray-600 font-light font-sans mt-3 text-center leading-relaxed">
-              *En el modo Demo local, cualquier contraseña de tu elección es aceptada.
-            </p>
-          </div>
+          )}
         </div>
       </div>
     </div>

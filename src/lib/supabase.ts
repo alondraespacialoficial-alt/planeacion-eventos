@@ -4,7 +4,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { Event, RSVP, UserSession, Service, Lead, Quote, LandingConfig, PaymentReceipt, VendorItem } from '../types';
+import { Event, RSVP, UserSession, Service, Lead, Quote, LandingConfig, PaymentReceipt, VendorItem, UserProfile } from '../types';
 
 // Read configuration from env
 const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
@@ -509,15 +509,38 @@ export const AppService = {
   },
 
   localLoginFallback(email: string): { user: UserSession; error: null } {
-    const is_admin = email.toLowerCase().includes('admin');
+    const cleanEmail = email.toLowerCase();
+    const is_super_admin = cleanEmail === 'admin@ejemplo.com';
+    const is_admin = is_super_admin || cleanEmail === 'adminbasico@ejemplo.com';
     const userSession: UserSession = {
       id: is_admin ? 'admin-user-id' : (email === 'graduado@ejemplo.com' ? 'client2-user-id' : 'client-user-id'),
       email: email,
-      role: is_admin ? 'admin' : 'client',
+      role: is_super_admin ? 'super_admin' : (is_admin ? 'admin' : 'client'),
       name: is_admin ? 'Administrador Eventos' : (email === 'graduado@ejemplo.com' ? 'Dr. Graduado' : 'Cliente Premium')
     };
     LocalStorageDB.saveSession(userSession);
     return { user: userSession, error: null };
+  },
+
+  // Resolve the REAL role of an authenticated Supabase user from the `profiles` table.
+  // NEVER infer roles from the email string — that is a privilege-escalation vulnerability.
+  async buildSessionFromSupabaseUser(user: { id: string; email?: string; user_metadata?: any }): Promise<UserSession> {
+    let role: UserSession['role'] = 'client';
+    let name = user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario';
+    try {
+      const { data: profile, error } = await supabase!
+        .from('profiles')
+        .select('role, name')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (!error && profile) {
+        role = profile.role;
+        name = profile.name || name;
+      }
+    } catch (err) {
+      console.error('Error fetching user profile/role', err);
+    }
+    return { id: user.id, email: user.email || '', role, name };
   },
 
   // --- AUTH SERVICES ---
@@ -538,14 +561,8 @@ export const AppService = {
           throw error;
         }
         
-        // Fetch metadata/profile to determine role. In Supabase we check metadata or profiles table.
-        const userRole: 'admin' | 'client' = email.includes('admin') ? 'admin' : 'client';
-        const session: UserSession = {
-          id: data.user?.id || 'supabase-user',
-          email: data.user?.email || email,
-          role: userRole,
-          name: data.user?.user_metadata?.name || email.split('@')[0]
-        };
+        // Fetch the real role from the `profiles` table (never trust the email string).
+        const session = await this.buildSessionFromSupabaseUser(data.user!);
         LocalStorageDB.saveSession(session);
         return { user: session, error: null };
       } catch (err: any) {
@@ -564,13 +581,15 @@ export const AppService = {
   async signUp(email: string, password_dummy: string, name: string): Promise<{ success: boolean, error: string | null }> {
     if (isSupabaseConfigured && supabase && supabaseTablesExist) {
       try {
+        // NOTE: role is never sent from the client. The database trigger `handle_new_user`
+        // assigns 'client' by default, or 'admin' automatically only if the email was
+        // previously added to the admin_allowlist table by a super_admin.
         const { error } = await supabase.auth.signUp({
           email,
           password: password_dummy,
           options: {
             data: {
-              name: name,
-              role: 'client'
+              name: name
             }
           }
         });
@@ -596,18 +615,57 @@ export const AppService = {
     if (isSupabaseConfigured && supabase && supabaseTablesExist) {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
-        const user = data.session.user;
-        const userRole: 'admin' | 'client' = user.email?.includes('admin') ? 'admin' : 'client';
-        return {
-          id: user.id,
-          email: user.email || '',
-          role: userRole,
-          name: user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario'
-        };
+        return this.buildSessionFromSupabaseUser(data.session.user);
       }
       return null;
     }
     return LocalStorageDB.getSession();
+  },
+
+  // --- ACCESS CONTROL SERVICES (Super Admin only, enforced by RLS in Supabase) ---
+  async getAdminAllowlist(): Promise<string[]> {
+    if (!isSupabaseConfigured || !supabase) return [];
+    const { data, error } = await supabase
+      .from('admin_allowlist')
+      .select('email')
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.error('Error fetching admin allowlist', error);
+      return [];
+    }
+    return (data || []).map((row: any) => row.email);
+  },
+
+  async addToAdminAllowlist(email: string): Promise<{ success: boolean; error: string | null }> {
+    if (!isSupabaseConfigured || !supabase) return { success: false, error: 'Supabase no está configurado.' };
+    const { error } = await supabase.from('admin_allowlist').insert([{ email: email.toLowerCase().trim() }]);
+    if (error) return { success: false, error: error.message };
+    return { success: true, error: null };
+  },
+
+  async removeFromAdminAllowlist(email: string): Promise<void> {
+    if (!isSupabaseConfigured || !supabase) return;
+    await supabase.from('admin_allowlist').delete().eq('email', email.toLowerCase().trim());
+  },
+
+  async listUserProfiles(): Promise<UserProfile[]> {
+    if (!isSupabaseConfigured || !supabase) return [];
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, email, name, role, created_at')
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.error('Error fetching user profiles', error);
+      return [];
+    }
+    return data || [];
+  },
+
+  async updateUserRole(userId: string, role: 'admin' | 'client'): Promise<{ success: boolean; error: string | null }> {
+    if (!isSupabaseConfigured || !supabase) return { success: false, error: 'Supabase no está configurado.' };
+    const { error } = await supabase.from('profiles').update({ role }).eq('id', userId);
+    if (error) return { success: false, error: error.message };
+    return { success: true, error: null };
   },
 
   // --- EVENT SERVICES ---
@@ -1353,6 +1411,24 @@ CREATE TABLE IF NOT EXISTS public.landing_config (
     business_address TEXT NOT NULL
 );
 
+-- 1.7. Create PROFILES Table (real source of truth for user roles)
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    name TEXT,
+    role TEXT CHECK (role IN ('super_admin', 'admin', 'client')) NOT NULL DEFAULT 'client',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 1.8. Create ADMIN_ALLOWLIST Table
+-- A super_admin adds an email here BEFORE the person registers. When that email
+-- signs up, the trigger below automatically grants it the 'admin' role and
+-- consumes the entry. This avoids ever trusting the email string itself.
+CREATE TABLE IF NOT EXISTS public.admin_allowlist (
+    email TEXT PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- ==========================================
 -- 2. Seed Initial Landing Configuration
 -- ==========================================
@@ -1370,6 +1446,50 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- ==========================================
+-- 2.1. Role Helper Functions & Auto-Profile Trigger
+-- ==========================================
+
+-- SECURITY DEFINER function: safe to call from any RLS policy without recursion.
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN LANGUAGE SQL SECURITY DEFINER STABLE
+AS $$
+  SELECT COALESCE((SELECT role IN ('admin', 'super_admin') FROM public.profiles WHERE id = auth.uid()), false);
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_super_admin()
+RETURNS BOOLEAN LANGUAGE SQL SECURITY DEFINER STABLE
+AS $$
+  SELECT COALESCE((SELECT role = 'super_admin' FROM public.profiles WHERE id = auth.uid()), false);
+$$;
+
+-- Automatically creates a profile row for every new auth user.
+-- Role defaults to 'client'; becomes 'admin' ONLY if the email was pre-approved
+-- in admin_allowlist by a super_admin. Nobody can self-grant admin/super_admin.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+DECLARE
+  assigned_role TEXT := 'client';
+BEGIN
+  IF EXISTS (SELECT 1 FROM public.admin_allowlist WHERE lower(email) = lower(NEW.email)) THEN
+    assigned_role := 'admin';
+    DELETE FROM public.admin_allowlist WHERE lower(email) = lower(NEW.email);
+  END IF;
+
+  INSERT INTO public.profiles (id, email, name, role)
+  VALUES (NEW.id, NEW.email, COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)), assigned_role)
+  ON CONFLICT (id) DO NOTHING;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ==========================================
 -- 3. Enable Row Level Security (RLS)
 -- ==========================================
 ALTER TABLE public.eventos ENABLE ROW LEVEL SECURITY;
@@ -1378,6 +1498,8 @@ ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.quotes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.landing_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_allowlist ENABLE ROW LEVEL SECURITY;
 
 -- ==========================================
 -- 4. Create Security Policies (RLS Rules)
@@ -1399,7 +1521,7 @@ DROP POLICY IF EXISTS "Admins full access to events" ON public.eventos;
 CREATE POLICY "Admins full access to events" ON public.eventos
     FOR ALL USING (
         auth.uid() = created_by OR 
-        (auth.jwt() ->> 'email' LIKE '%admin%')
+        public.is_admin()
     );
 
 -- 4.2. Policies for RSVPS
@@ -1428,7 +1550,7 @@ CREATE POLICY "Public read visible services" ON public.services
 DROP POLICY IF EXISTS "Admins full access to services" ON public.services;
 CREATE POLICY "Admins full access to services" ON public.services
     FOR ALL USING (
-        auth.role() = 'authenticated' AND (auth.jwt() ->> 'email' LIKE '%admin%')
+        public.is_admin()
     );
 
 -- 4.4. Policies for LEADS
@@ -1439,7 +1561,7 @@ CREATE POLICY "Public submit lead requests" ON public.leads
 DROP POLICY IF EXISTS "Admins full access to leads" ON public.leads;
 CREATE POLICY "Admins full access to leads" ON public.leads
     FOR ALL USING (
-        auth.role() = 'authenticated' AND (auth.jwt() ->> 'email' LIKE '%admin%')
+        public.is_admin()
     );
 
 -- 4.5. Policies for QUOTES
@@ -1452,7 +1574,7 @@ CREATE POLICY "Clients read own quotes" ON public.quotes
 DROP POLICY IF EXISTS "Admins full access to quotes" ON public.quotes;
 CREATE POLICY "Admins full access to quotes" ON public.quotes
     FOR ALL USING (
-        auth.role() = 'authenticated' AND (auth.jwt() ->> 'email' LIKE '%admin%')
+        public.is_admin()
     );
 
 -- 4.6. Policies for LANDING_CONFIG
@@ -1463,8 +1585,26 @@ CREATE POLICY "Public read landing config" ON public.landing_config
 DROP POLICY IF EXISTS "Admins full access to landing config" ON public.landing_config;
 CREATE POLICY "Admins full access to landing config" ON public.landing_config
     FOR ALL USING (
-        auth.role() = 'authenticated' AND (auth.jwt() ->> 'email' LIKE '%admin%')
+        public.is_admin()
     );
+
+-- 4.7. Policies for PROFILES
+DROP POLICY IF EXISTS "Users read own profile" ON public.profiles;
+CREATE POLICY "Users read own profile" ON public.profiles
+    FOR SELECT USING (
+        auth.uid() = id OR public.is_admin()
+    );
+
+DROP POLICY IF EXISTS "Super admin manage profiles" ON public.profiles;
+CREATE POLICY "Super admin manage profiles" ON public.profiles
+    FOR UPDATE USING (public.is_super_admin())
+    WITH CHECK (public.is_super_admin());
+
+-- 4.8. Policies for ADMIN_ALLOWLIST (super_admin only, in both directions)
+DROP POLICY IF EXISTS "Super admin manage allowlist" ON public.admin_allowlist;
+CREATE POLICY "Super admin manage allowlist" ON public.admin_allowlist
+    FOR ALL USING (public.is_super_admin())
+    WITH CHECK (public.is_super_admin());
 
 
 -- ==========================================
@@ -1504,4 +1644,14 @@ CREATE POLICY "Authenticated Users Delete"
 ON storage.objects FOR DELETE
 TO authenticated
 USING (bucket_id = 'event-assets');
+
+-- ==========================================
+-- 6. ONE-TIME BOOTSTRAP: Set your first Super Admin
+-- ==========================================
+-- 1) Regístrate normalmente desde la app con tu correo (quedará como 'client').
+-- 2) Ejecuta esta línea UNA SOLA VEZ, reemplazando el correo por el tuyo, para
+--    convertirte en el primer Super Admin. Ningún usuario puede hacerse
+--    super_admin por sí mismo, solo mediante este paso manual en el SQL Editor.
+--
+-- UPDATE public.profiles SET role = 'super_admin' WHERE email = 'tu_correo@dominio.com';
 `;
