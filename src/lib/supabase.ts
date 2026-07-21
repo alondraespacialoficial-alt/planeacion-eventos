@@ -892,6 +892,20 @@ export const AppService = {
 
   // --- PAYMENT RECEIPTS SERVICES ---
   async getPaymentReceipts(user?: UserSession): Promise<PaymentReceipt[]> {
+    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
+      try {
+        let query = supabase.from('payment_receipts').select('*');
+        if (user && user.role === 'client') {
+          query = query.eq('client_email', user.email);
+        }
+        const { data, error } = await query.order('created_at', { ascending: false });
+        if (error) throw error;
+        return (data || []) as PaymentReceipt[];
+      } catch (err) {
+        console.error('Error fetching Supabase payment receipts, trying fallback...', err);
+      }
+    }
+
     const all = LocalStorageDB.getPayments();
     if (user && user.role === 'client') {
       return all.filter(p => p.client_email.toLowerCase() === user.email.toLowerCase());
@@ -900,6 +914,17 @@ export const AppService = {
   },
 
   async submitPaymentReceipt(receipt: Omit<PaymentReceipt, 'id' | 'created_at' | 'status'>): Promise<PaymentReceipt> {
+    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
+      try {
+        const payload = { ...receipt, id: 'pay-' + Math.random().toString(36).substr(2, 9), status: 'pending' as const };
+        const { data, error } = await supabase.from('payment_receipts').insert([payload]).select().single();
+        if (error) throw error;
+        return data as PaymentReceipt;
+      } catch (err) {
+        console.error('Error submitting payment receipt to Supabase, using local fallback', err);
+      }
+    }
+
     const newReceipt: PaymentReceipt = {
       ...receipt,
       id: 'pay-' + Math.random().toString(36).substr(2, 9),
@@ -912,7 +937,30 @@ export const AppService = {
     return newReceipt;
   },
 
+  // NOTE: this write is security-sensitive (approving/rejecting money received).
+  // The real enforcement lives in the DB via RLS ("Only super admin updates payment
+  // receipts"), so even if this were called by a non-super_admin the database itself
+  // will reject the UPDATE. We additionally gate the UI so a regular admin never sees
+  // the action buttons in the first place.
   async updatePaymentReceiptStatus(id: string, status: 'verified' | 'rejected' | 'pending', notes?: string): Promise<PaymentReceipt | null> {
+    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
+      try {
+        const updateFields: { status: typeof status; notes?: string } = { status };
+        if (notes !== undefined) updateFields.notes = notes;
+        const { data, error } = await supabase
+          .from('payment_receipts')
+          .update(updateFields)
+          .eq('id', id)
+          .select()
+          .maybeSingle();
+        if (error) throw error;
+        return data as PaymentReceipt | null;
+      } catch (err) {
+        console.error('Error updating payment receipt status in Supabase', err);
+        return null;
+      }
+    }
+
     const all = LocalStorageDB.getPayments();
     const idx = all.findIndex(p => p.id === id);
     if (idx !== -1) {
@@ -1441,6 +1489,26 @@ CREATE TABLE IF NOT EXISTS public.admin_allowlist (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 1.9. Create PAYMENT_RECEIPTS Table
+-- Clients submit their own payment receipts here. Only a super_admin is allowed
+-- to change the status (verify/reject) -- a regular admin can only read them.
+CREATE TABLE IF NOT EXISTS public.payment_receipts (
+    id TEXT PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    event_id TEXT,
+    client_id UUID REFERENCES auth.users(id),
+    client_name TEXT NOT NULL,
+    client_email TEXT NOT NULL,
+    amount NUMERIC NOT NULL,
+    payment_type TEXT CHECK (payment_type IN ('anticipo', 'saldo', 'abono_extra')) NOT NULL,
+    payment_method TEXT CHECK (payment_method IN ('transferencia', 'efectivo', 'tarjeta')) NOT NULL,
+    concept TEXT,
+    reference_code TEXT,
+    receipt_url TEXT,
+    status TEXT CHECK (status IN ('pending', 'verified', 'rejected')) DEFAULT 'pending' NOT NULL,
+    notes TEXT
+);
+
 -- ==========================================
 -- 2. Seed Initial Landing Configuration
 -- ==========================================
@@ -1512,6 +1580,7 @@ ALTER TABLE public.quotes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.landing_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_allowlist ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payment_receipts ENABLE ROW LEVEL SECURITY;
 
 -- ==========================================
 -- 4. Create Security Policies (RLS Rules)
@@ -1617,6 +1686,32 @@ DROP POLICY IF EXISTS "Super admin manage allowlist" ON public.admin_allowlist;
 CREATE POLICY "Super admin manage allowlist" ON public.admin_allowlist
     FOR ALL USING (public.is_super_admin())
     WITH CHECK (public.is_super_admin());
+
+-- 4.9. Policies for PAYMENT_RECEIPTS
+-- Clients submit their own receipts; admins/super_admins may submit on behalf of a client too.
+DROP POLICY IF EXISTS "Clients submit own payment receipts" ON public.payment_receipts;
+CREATE POLICY "Clients submit own payment receipts" ON public.payment_receipts
+    FOR INSERT WITH CHECK (
+        auth.uid() = client_id OR public.is_admin()
+    );
+
+-- Clients read only their own receipts; admins/super_admins read all (for follow-up with clients).
+DROP POLICY IF EXISTS "Read own or admin payment receipts" ON public.payment_receipts;
+CREATE POLICY "Read own or admin payment receipts" ON public.payment_receipts
+    FOR SELECT USING (
+        auth.uid() = client_id OR public.is_admin()
+    );
+
+-- CRITICAL: only super_admin may change the status (verify/reject) of a payment.
+-- A regular admin (vendedor) can see the receipts tab but can never approve/reject payments.
+DROP POLICY IF EXISTS "Only super admin updates payment receipts" ON public.payment_receipts;
+CREATE POLICY "Only super admin updates payment receipts" ON public.payment_receipts
+    FOR UPDATE USING (public.is_super_admin())
+    WITH CHECK (public.is_super_admin());
+
+DROP POLICY IF EXISTS "Only super admin deletes payment receipts" ON public.payment_receipts;
+CREATE POLICY "Only super admin deletes payment receipts" ON public.payment_receipts
+    FOR DELETE USING (public.is_super_admin());
 
 
 -- ==========================================

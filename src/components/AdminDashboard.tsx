@@ -1186,7 +1186,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                         <th className="py-4 px-6">Método & Ref.</th>
                         <th className="py-4 px-6 text-center">Estado Auditoría</th>
                         <th className="py-4 px-6 text-center">Ficha / Comprobante</th>
-                        <th className="py-4 px-6 text-center">Acciones (Admin Supremo)</th>
+                        <th className="py-4 px-6 text-center">{isSuperAdmin ? 'Acciones (Super Admin)' : 'Estado'}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800/40">
@@ -1274,37 +1274,43 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                             </td>
 
                             <td className="py-4 px-6">
-                              <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5">
-                                {p.status !== 'verified' && (
-                                  <button
-                                    onClick={() => handleUpdatePaymentStatus(p.id, 'verified')}
-                                    className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500 hover:text-black text-emerald-400 font-mono text-[10px] font-bold tracking-wider uppercase transition-all cursor-pointer w-full sm:w-auto"
-                                    title="Aprobar y marcar como Recibido en banco"
-                                  >
-                                    ✓ Marcar Recibido
-                                  </button>
-                                )}
+                              {isSuperAdmin ? (
+                                <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5">
+                                  {p.status !== 'verified' && (
+                                    <button
+                                      onClick={() => handleUpdatePaymentStatus(p.id, 'verified')}
+                                      className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500 hover:text-black text-emerald-400 font-mono text-[10px] font-bold tracking-wider uppercase transition-all cursor-pointer w-full sm:w-auto"
+                                      title="Aprobar y marcar como Recibido en banco"
+                                    >
+                                      ✓ Marcar Recibido
+                                    </button>
+                                  )}
 
-                                {p.status !== 'rejected' && (
-                                  <button
-                                    onClick={() => handleUpdatePaymentStatus(p.id, 'rejected')}
-                                    className="px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/30 hover:bg-red-500 hover:text-white text-red-400 font-mono text-[10px] font-bold tracking-wider uppercase transition-all cursor-pointer w-full sm:w-auto"
-                                    title="Rechazar comprobante"
-                                  >
-                                    ✕ Rechazar
-                                  </button>
-                                )}
+                                  {p.status !== 'rejected' && (
+                                    <button
+                                      onClick={() => handleUpdatePaymentStatus(p.id, 'rejected')}
+                                      className="px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/30 hover:bg-red-500 hover:text-white text-red-400 font-mono text-[10px] font-bold tracking-wider uppercase transition-all cursor-pointer w-full sm:w-auto"
+                                      title="Rechazar comprobante"
+                                    >
+                                      ✕ Rechazar
+                                    </button>
+                                  )}
 
-                                {p.status !== 'pending' && (
-                                  <button
-                                    onClick={() => handleUpdatePaymentStatus(p.id, 'pending')}
-                                    className="px-2 py-1 text-gray-500 hover:text-amber-400 font-mono text-[9px] uppercase transition-colors"
-                                    title="Regresar a revisión"
-                                  >
-                                    ⏳ Reinstaurar
-                                  </button>
-                                )}
-                              </div>
+                                  {p.status !== 'pending' && (
+                                    <button
+                                      onClick={() => handleUpdatePaymentStatus(p.id, 'pending')}
+                                      className="px-2 py-1 text-gray-500 hover:text-amber-400 font-mono text-[9px] uppercase transition-colors"
+                                      title="Regresar a revisión"
+                                    >
+                                      ⏳ Reinstaurar
+                                    </button>
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-center text-[9px] font-mono text-gray-600 uppercase tracking-wider">
+                                  Solo lectura
+                                </p>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -1426,28 +1432,36 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                   Cerrar
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleUpdatePaymentStatus(selectedPaymentModal.id, 'rejected', adminPaymentNoteInput);
-                    setSelectedPaymentModal(null);
-                  }}
-                  className="px-5 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 hover:bg-red-500 hover:text-white text-red-400 font-mono text-xs font-bold tracking-wider uppercase cursor-pointer"
-                >
-                  ✕ Rechazar
-                </button>
+                {isSuperAdmin ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleUpdatePaymentStatus(selectedPaymentModal.id, 'rejected', adminPaymentNoteInput);
+                        setSelectedPaymentModal(null);
+                      }}
+                      className="px-5 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 hover:bg-red-500 hover:text-white text-red-400 font-mono text-xs font-bold tracking-wider uppercase cursor-pointer"
+                    >
+                      ✕ Rechazar
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleUpdatePaymentStatus(selectedPaymentModal.id, 'verified', adminPaymentNoteInput);
-                    setSelectedPaymentModal(null);
-                  }}
-                  className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-mono text-xs font-bold tracking-wider uppercase shadow-lg shadow-emerald-500/10 cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  ✓ Marcar como Recibido y Verificado
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleUpdatePaymentStatus(selectedPaymentModal.id, 'verified', adminPaymentNoteInput);
+                        setSelectedPaymentModal(null);
+                      }}
+                      className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-mono text-xs font-bold tracking-wider uppercase shadow-lg shadow-emerald-500/10 cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      ✓ Marcar como Recibido y Verificado
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-[10px] font-mono text-gray-500 uppercase tracking-wider self-center">
+                    Solo el super admin puede aprobar o rechazar pagos.
+                  </p>
+                )}
               </div>
             </motion.div>
           </div>
