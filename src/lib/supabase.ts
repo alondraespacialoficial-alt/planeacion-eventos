@@ -566,7 +566,14 @@ export const AppService = {
           password: password_dummy,
         });
         if (error) {
-          return { user: null, error: 'Correo o contraseña incorrectos.' };
+          const msg = (error.message || '').toLowerCase();
+          if (msg.includes('email not confirmed')) {
+            return { user: null, error: 'Debes confirmar tu correo antes de iniciar sesión. Revisa tu bandeja de entrada (o pide a un super_admin que lo confirme manualmente).' };
+          }
+          if (msg.includes('invalid login credentials')) {
+            return { user: null, error: 'Correo o contraseña incorrectos.' };
+          }
+          return { user: null, error: error.message };
         }
         
         // Fetch the real role from the `profiles` table (never trust the email string).
