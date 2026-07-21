@@ -62,7 +62,9 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   const isSuperAdmin = currentUser.role === 'super_admin';
 
   // Tabs State: 'cards' (Events), 'quotes', 'payments', 'leads', 'services', 'config', 'access'
-  const [activeTab, setActiveTab] = useState<'cards' | 'quotes' | 'payments' | 'leads' | 'services' | 'config' | 'access'>('cards');
+  const [activeTab, setActiveTab] = useState<'cards' | 'quotes' | 'payments' | 'leads' | 'services' | 'config' | 'access'>(
+    isSuperAdmin ? 'cards' : 'leads'
+  );
 
   const [loading, setLoading] = useState(true);
 
@@ -760,13 +762,15 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowSqlGuide(!showSqlGuide)}
-              className="px-4 py-2 rounded-full border border-amber-500/20 hover:border-amber-500/50 text-[10px] tracking-widest font-mono text-amber-500 flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <FileCode className="w-3.5 h-3.5" />
-              SQL BLUEPRINT
-            </button>
+            {isSuperAdmin && (
+              <button
+                onClick={() => setShowSqlGuide(!showSqlGuide)}
+                className="px-4 py-2 rounded-full border border-amber-500/20 hover:border-amber-500/50 text-[10px] tracking-widest font-mono text-amber-500 flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <FileCode className="w-3.5 h-3.5" />
+                SQL BLUEPRINT
+              </button>
+            )}
 
             <button 
               onClick={onLogout}
@@ -782,13 +786,15 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
       {/* Tab Selectors */}
       <div className="bg-[#0a0c10] border-b border-gray-900 px-6">
         <div className="max-w-7xl mx-auto flex gap-6 text-xs font-mono uppercase tracking-widest font-semibold py-3 overflow-x-auto">
-          <button 
-            onClick={() => setActiveTab('cards')}
-            className={`pb-1 border-b-2 transition-all flex items-center gap-1.5 ${activeTab === 'cards' ? 'border-amber-500 text-amber-500' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            Tarjetas Digitales ({events.length})
-          </button>
+          {isSuperAdmin && (
+            <button 
+              onClick={() => setActiveTab('cards')}
+              className={`pb-1 border-b-2 transition-all flex items-center gap-1.5 ${activeTab === 'cards' ? 'border-amber-500 text-amber-500' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              Tarjetas Digitales ({events.length})
+            </button>
+          )}
           <button 
             onClick={() => setActiveTab('quotes')}
             className={`pb-1 border-b-2 transition-all flex items-center gap-1.5 ${activeTab === 'quotes' ? 'border-amber-500 text-amber-500' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
@@ -814,20 +820,24 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
             <Users className="w-3.5 h-3.5" />
             Bandeja Leads ({leads.length})
           </button>
-          <button 
-            onClick={() => setActiveTab('services')}
-            className={`pb-1 border-b-2 transition-all flex items-center gap-1.5 ${activeTab === 'services' ? 'border-amber-500 text-amber-500' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
-          >
-            <CheckSquare className="w-3.5 h-3.5" />
-            Catálogo Servicios ({services.length})
-          </button>
-          <button 
-            onClick={() => setActiveTab('config')}
-            className={`pb-1 border-b-2 transition-all flex items-center gap-1.5 ${activeTab === 'config' ? 'border-amber-500 text-amber-500' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
-          >
-            <Settings className="w-3.5 h-3.5" />
-            Personalizar Landing
-          </button>
+          {isSuperAdmin && (
+            <button 
+              onClick={() => setActiveTab('services')}
+              className={`pb-1 border-b-2 transition-all flex items-center gap-1.5 ${activeTab === 'services' ? 'border-amber-500 text-amber-500' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+            >
+              <CheckSquare className="w-3.5 h-3.5" />
+              Catálogo Servicios ({services.length})
+            </button>
+          )}
+          {isSuperAdmin && (
+            <button 
+              onClick={() => setActiveTab('config')}
+              className={`pb-1 border-b-2 transition-all flex items-center gap-1.5 ${activeTab === 'config' ? 'border-amber-500 text-amber-500' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+            >
+              <Settings className="w-3.5 h-3.5" />
+              Personalizar Landing
+            </button>
+          )}
           {isSuperAdmin && (
             <button 
               onClick={() => setActiveTab('access')}
@@ -843,7 +853,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
       <main className="max-w-7xl mx-auto px-6 pt-8">
         
         {/* SQL Guide panel */}
-        {showSqlGuide && (
+        {showSqlGuide && isSuperAdmin && (
           <motion.div 
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -875,7 +885,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
         )}
 
         {/* TAB 1: CARDS MANAGEMENT */}
-        {activeTab === 'cards' && (
+        {activeTab === 'cards' && isSuperAdmin && (
           <div className="space-y-6">
             <div className="flex justify-between items-center gap-4 flex-wrap">
               <div>
@@ -1568,7 +1578,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
         )}
 
         {/* TAB 4: SERVICES CATALOG */}
-        {activeTab === 'services' && (
+        {activeTab === 'services' && isSuperAdmin && (
           <div className="space-y-6">
             <div className="flex justify-between items-center gap-4 flex-wrap">
               <div>
@@ -1615,7 +1625,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
         )}
 
         {/* TAB 5: WEBSITE SETTINGS */}
-        {activeTab === 'config' && (
+        {activeTab === 'config' && isSuperAdmin && (
           <div className="space-y-6 max-w-3xl">
             <div>
               <h3 className="font-serif text-2xl text-white font-medium">Personalización de Landing Page</h3>
