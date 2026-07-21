@@ -1,0 +1,6 @@
+{
+  "name": "Tarjetas Digitales de Eventos",
+  "description": "Plataforma web para crear, gestionar y compartir tarjetas digitales de eventos, con confirmaciones RSVP y paneles de administración.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
