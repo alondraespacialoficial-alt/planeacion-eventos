@@ -130,21 +130,6 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Hidden admin click backdoor (5 clicks on logo)
-  const [logoClicks, setLogoClicks] = useState(0);
-
-  const handleLogoClick = () => {
-    setLogoClicks(prev => {
-      const next = prev + 1;
-      if (next >= 5) {
-        localStorage.setItem('showSecretDoor', 'true');
-        onNavigate('login');
-        return 0;
-      }
-      return next;
-    });
-  };
-
   // Form State for Public Quote Form
   const [quoteForm, setQuoteForm] = useState({
     name: '',
@@ -346,7 +331,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
       {/* Floating Elegant Navigation Header */}
       <header id="top" className="sticky top-0 z-50 backdrop-blur-md bg-[#07080a]/85 border-b border-gray-800/50 px-6 py-4 transition-all">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={handleLogoClick}>
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => onNavigate('landing')}>
             <div className="h-10 w-10 rounded-full border border-amber-500/40 flex items-center justify-center bg-gradient-to-br from-amber-500/20 to-transparent group-hover:border-amber-400 transition-all overflow-hidden shrink-0">
               {config.logo_url ? (
                 <img src={config.logo_url} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />

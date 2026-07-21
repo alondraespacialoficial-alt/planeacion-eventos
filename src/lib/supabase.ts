@@ -546,19 +546,16 @@ export const AppService = {
   // --- AUTH SERVICES ---
   async login(email: string, password_dummy: string): Promise<{ user: UserSession | null, error: string | null }> {
     if (isSupabaseConfigured && supabase && supabaseTablesExist) {
+      // Real Supabase Auth is configured: ALWAYS validate against it.
+      // There is no local/demo bypass here — every login must go through
+      // supabase.auth.signInWithPassword, which enforces the real password.
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password: password_dummy,
         });
         if (error) {
-          // If login fails, check if we are using standard test accounts and bypass
-          const cleanEmail = email.toLowerCase();
-          if (cleanEmail === 'admin@ejemplo.com' || cleanEmail === 'cliente@ejemplo.com' || cleanEmail === 'graduado@ejemplo.com') {
-            console.warn('Real Supabase auth failed, using demo fallback for test user.');
-            return this.localLoginFallback(email);
-          }
-          throw error;
+          return { user: null, error: 'Correo o contraseña incorrectos.' };
         }
         
         // Fetch the real role from the `profiles` table (never trust the email string).
@@ -566,14 +563,11 @@ export const AppService = {
         LocalStorageDB.saveSession(session);
         return { user: session, error: null };
       } catch (err: any) {
-        // Fallback for default test users on error
-        const cleanEmail = email.toLowerCase();
-        if (cleanEmail === 'admin@ejemplo.com' || cleanEmail === 'cliente@ejemplo.com' || cleanEmail === 'graduado@ejemplo.com') {
-          return this.localLoginFallback(email);
-        }
         return { user: null, error: err.message || 'Error de inicio de sesión' };
       }
     } else {
+      // Supabase is NOT configured at all (local-only demo mode, no backend).
+      // This path is only reachable in development without env vars set.
       return this.localLoginFallback(email);
     }
   },
