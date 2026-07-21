@@ -24,6 +24,8 @@ export default function LoginPage({ onLoginSuccess, onNavigate }: LoginPageProps
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const supabaseStatus = AppService.getSupabaseStatus();
+  const isRealBackend = supabaseStatus.configured && supabaseStatus.tablesExist;
 
   useEffect(() => {
     if (infoMessage) {
@@ -118,6 +120,21 @@ export default function LoginPage({ onLoginSuccess, onNavigate }: LoginPageProps
           
           {/* Decorative Top Accent line */}
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-500/40 to-transparent"></div>
+
+          {/* Connection status indicator: helps confirm whether the app is really
+              talking to Supabase (and not silently running in offline/demo mode) */}
+          <div
+            className={`mb-5 flex items-center gap-2 rounded-lg border px-3 py-2 text-[9px] font-mono tracking-wider ${
+              isRealBackend
+                ? 'border-emerald-500/25 bg-emerald-500/5 text-emerald-400'
+                : 'border-red-500/30 bg-red-500/10 text-red-400'
+            }`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${isRealBackend ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`}></span>
+            {isRealBackend
+              ? 'CONECTADO A SUPABASE (base de datos real)'
+              : 'MODO LOCAL: sin conexión real a Supabase'}
+          </div>
 
           {/* Logo Heading */}
           <div className="text-center mb-8">

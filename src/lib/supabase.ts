@@ -7,8 +7,16 @@ import { createClient } from '@supabase/supabase-js';
 import { Event, RSVP, UserSession, Service, Lead, Quote, LandingConfig, PaymentReceipt, VendorItem, UserProfile } from '../types';
 
 // Read configuration from env
-const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
+const rawSupabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
 const supabaseAnonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
+
+// Defensive normalization: the Project URL must be exactly `https://xxxx.supabase.co`.
+// If someone accidentally pastes a value with a trailing `/rest/v1` or a trailing slash
+// (a common copy/paste mistake), the Supabase client silently fails every single request,
+// which makes the whole app fall back to local/demo mode without any visible error.
+const supabaseUrl = rawSupabaseUrl
+  ? String(rawSupabaseUrl).trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '')
+  : rawSupabaseUrl;
 
 export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
 
@@ -38,13 +46,16 @@ export async function verifySupabaseTables(): Promise<boolean> {
         error.code === 'PGRST116' || 
         (error as any).status === 404
       ) {
+        console.error('[Supabase] Las tablas no existen o la URL/clave es inválida:', error);
         supabaseTablesExist = false;
         return false;
       }
+      console.warn('[Supabase] verifySupabaseTables recibió un error no crítico:', error);
     }
     supabaseTablesExist = true;
     return true;
   } catch (err) {
+    console.error('[Supabase] No se pudo conectar (revisa VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY):', err);
     supabaseTablesExist = false;
     return false;
   }
