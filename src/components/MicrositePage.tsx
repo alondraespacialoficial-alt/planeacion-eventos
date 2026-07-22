@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { 
   Calendar, 
@@ -24,7 +24,8 @@ import {
   Download,
   Printer,
   Ticket,
-  CheckCircle
+  CheckCircle,
+  Images
 } from 'lucide-react';
 import { Event, RSVP } from '../types';
 import { AppService } from '../lib/supabase';
@@ -53,8 +54,9 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submittedRsvp, setSubmittedRsvp] = useState<RSVP | null>(null);
   
-  // Custom Music Player State (Simulated Premium Audio experience)
+  // Background Music Player State
   const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
   
   // Countdown Timer State
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -82,6 +84,16 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
     }
     loadEvent();
   }, [eventId]);
+
+  // Play/pause the background audio track when the user toggles the music control
+  useEffect(() => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.play().catch(() => setIsPlaying(false));
+    } else {
+      audioRef.current.pause();
+    }
+  }, [isPlaying]);
 
   // Countdown timer logic
   useEffect(() => {
@@ -227,15 +239,19 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
         </div>
 
         <div className="absolute top-6 right-6 z-30 flex items-center gap-2">
-          {/* Simulated Music Player for Elegance */}
-          <button 
-            onClick={() => setIsPlaying(!isPlaying)}
-            className="p-2.5 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 text-amber-400 hover:scale-105 transition-all flex items-center justify-center"
-            title="Música de ambiente"
-            id="btn-play-music"
-          >
-            {isPlaying ? <Volume2 className="w-4 h-4 animate-bounce" /> : <VolumeX className="w-4 h-4 text-gray-500" />}
-          </button>
+          {event.music_url && (
+            <>
+              <audio ref={audioRef} src={event.music_url} loop preload="none" />
+              <button 
+                onClick={() => setIsPlaying(!isPlaying)}
+                className="p-2.5 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 text-amber-400 hover:scale-105 transition-all flex items-center justify-center"
+                title="Música de ambiente"
+                id="btn-play-music"
+              >
+                {isPlaying ? <Volume2 className="w-4 h-4 animate-bounce" /> : <VolumeX className="w-4 h-4 text-gray-500" />}
+              </button>
+            </>
+          )}
           
           <button 
             onClick={handleCopyLink}
@@ -274,6 +290,31 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
           </motion.div>
         </div>
       </section>
+
+      {/* Gallery: Nuestra Historia */}
+      {event.gallery_urls && event.gallery_urls.length > 0 && (
+        <section className="max-w-5xl mx-auto px-6 py-20 relative" id="our-story">
+          <div className="text-center mb-12">
+            <div className="h-10 w-10 rounded-full border border-amber-500/30 flex items-center justify-center bg-amber-500/10 mx-auto mb-4">
+              <Images className="w-4 h-4 text-amber-400" />
+            </div>
+            <p className="text-[10px] tracking-[0.3em] font-mono text-gray-500 uppercase mb-2">Momentos que atesoramos</p>
+            <h2 className="font-serif text-3xl text-white font-light">Nuestra Historia</h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {event.gallery_urls.map((url, index) => (
+              <div key={index} className="aspect-square rounded-xl overflow-hidden border border-gray-800 group">
+                <img 
+                  src={url} 
+                  alt={`Momento ${index + 1}`} 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Ceremony Details & Timer */}
       <section id="ceremony-details" className="max-w-4xl mx-auto px-6 py-20 relative">

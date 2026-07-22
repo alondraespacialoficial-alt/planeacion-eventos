@@ -114,10 +114,16 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   const [evtCoverUrl, setEvtCoverUrl] = useState('');
   const [evtRsvpDeadline, setEvtRsvpDeadline] = useState('');
   const [evtClientEmail, setEvtClientEmail] = useState('');
+  const [evtGalleryUrls, setEvtGalleryUrls] = useState<string[]>([]);
+  const [evtMusicUrl, setEvtMusicUrl] = useState('');
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState('');
+  const [uploadingGallery, setUploadingGallery] = useState(false);
+  const [uploadingMusic, setUploadingMusic] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingHeroBg, setUploadingHeroBg] = useState(false);
+
+  const MAX_GALLERY_PHOTOS = 6;
 
   // 2. =========================================================
   // MODAL / FORM STATE FOR QUOTES (COTIZACIONES)
@@ -313,6 +319,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     setEvtCoverUrl('');
     setEvtRsvpDeadline('');
     setEvtClientEmail('');
+    setEvtGalleryUrls([]);
+    setEvtMusicUrl('');
     setUploadedFileName('');
     setIsEventFormOpen(true);
   };
@@ -330,6 +338,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     setEvtCoverUrl(evt.cover_url);
     setEvtRsvpDeadline(evt.rsvp_deadline);
     setEvtClientEmail(evt.client_email);
+    setEvtGalleryUrls(evt.gallery_urls || []);
+    setEvtMusicUrl(evt.music_url || '');
     setIsEventFormOpen(true);
   };
 
@@ -351,6 +361,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
         map_embed_url: evtMapEmbedUrl,
         cover_type: evtCoverType,
         cover_url: evtCoverUrl || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=1200',
+        gallery_urls: evtGalleryUrls,
+        music_url: evtMusicUrl,
         rsvp_deadline: evtRsvpDeadline,
         status: (editingEventId ? events.find(ev => ev.id === editingEventId)?.status : 'active') || 'active',
         client_email: evtClientEmail.trim().toLowerCase()
@@ -412,6 +424,59 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
       showToast('Error al subir archivo.', 'error');
     } finally {
       setUploadingMedia(false);
+    }
+  };
+
+  const handleGalleryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const availableSlots = MAX_GALLERY_PHOTOS - evtGalleryUrls.length;
+    if (availableSlots <= 0) {
+      showToast(`Ya alcanzaste el máximo de ${MAX_GALLERY_PHOTOS} fotos en la galería.`, 'error');
+      e.target.value = '';
+      return;
+    }
+
+    const filesToUpload = files.slice(0, availableSlots);
+    if (files.length > availableSlots) {
+      showToast(`Solo se subirán ${availableSlots} foto(s), el máximo es ${MAX_GALLERY_PHOTOS}.`, 'info');
+    }
+
+    setUploadingGallery(true);
+    try {
+      const uploadedUrls: string[] = [];
+      for (const file of filesToUpload) {
+        const url = await AppService.uploadMedia(file);
+        uploadedUrls.push(url);
+      }
+      setEvtGalleryUrls(prev => [...prev, ...uploadedUrls]);
+      showToast('Fotos de galería subidas con éxito.', 'success');
+    } catch (err) {
+      showToast('Error al subir una o más fotos de la galería.', 'error');
+    } finally {
+      setUploadingGallery(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveGalleryImage = (index: number) => {
+    setEvtGalleryUrls(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleMusicFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingMusic(true);
+    try {
+      const url = await AppService.uploadMedia(file);
+      setEvtMusicUrl(url);
+      showToast('Audio de fondo subido con éxito.', 'success');
+    } catch (err) {
+      showToast('Error al subir el audio.', 'error');
+    } finally {
+      setUploadingMusic(false);
+      e.target.value = '';
     }
   };
 
@@ -1999,6 +2064,41 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
               <div className="border border-dashed border-gray-800 rounded-lg p-4 bg-black/20 text-center relative cursor-pointer">
                 <input type="file" onChange={handleFileChange} accept="image/*,video/*" className="absolute inset-0 opacity-0 cursor-pointer" />
                 {uploadingMedia ? <p className="text-amber-500">Subiendo {uploadedFileName}...</p> : <p className="text-gray-500">Arrastre o seleccione archivo de portada para almacenar en Supabase Storage</p>}
+              </div>
+
+              <div>
+                <label className="block font-mono text-gray-400 mb-1">GALERÍA "NUESTRA HISTORIA" ({evtGalleryUrls.length}/{MAX_GALLERY_PHOTOS} FOTOS)</label>
+                {evtGalleryUrls.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-2">
+                    {evtGalleryUrls.map((url, index) => (
+                      <div key={index} className="relative aspect-square rounded overflow-hidden border border-gray-800 group">
+                        <img src={url} alt={`Foto galería ${index + 1}`} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveGalleryImage(index)}
+                          className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/70 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {evtGalleryUrls.length < MAX_GALLERY_PHOTOS && (
+                  <div className="border border-dashed border-gray-800 rounded-lg p-4 bg-black/20 text-center relative cursor-pointer">
+                    <input type="file" multiple onChange={handleGalleryFileChange} accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" />
+                    {uploadingGallery ? <p className="text-amber-500">Subiendo fotos...</p> : <p className="text-gray-500">Agregar fotos de los festejados para la sección "Nuestra Historia"</p>}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block font-mono text-gray-400 mb-1">AUDIO DE FONDO (OPCIONAL)</label>
+                <input type="text" value={evtMusicUrl} onChange={(e) => setEvtMusicUrl(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white mb-2" placeholder="Enlace directo .mp3 o suba abajo" />
+                <div className="border border-dashed border-gray-800 rounded-lg p-4 bg-black/20 text-center relative cursor-pointer">
+                  <input type="file" onChange={handleMusicFileChange} accept="audio/*" className="absolute inset-0 opacity-0 cursor-pointer" />
+                  {uploadingMusic ? <p className="text-amber-500">Subiendo audio...</p> : <p className="text-gray-500">Arrastre o seleccione un archivo de audio (mp3) para almacenar en Supabase Storage</p>}
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-4">

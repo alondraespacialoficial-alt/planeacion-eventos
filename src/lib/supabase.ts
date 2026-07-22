@@ -75,6 +75,13 @@ const DEFAULT_EVENTS: Event[] = [
     map_embed_url: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m12!1m3!1d3762.4601423871415!2d-99.21370248509318!3d19.4357499868822!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85d2021c3fa36ef5%3A0xc6cb1c7df4446c62!2sHacienda%20De%20Los%20Morales!5e0!3m2!1ses!2smx!4v1700000000000!5m2!1ses!2smx',
     cover_type: 'image',
     cover_url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1200',
+    gallery_urls: [
+      'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?auto=format&fit=crop&q=80&w=800'
+    ],
+    music_url: '',
     rsvp_deadline: '2026-10-31',
     status: 'active',
     created_by: 'client-user-id',
@@ -1438,6 +1445,8 @@ CREATE TABLE IF NOT EXISTS public.eventos (
     map_embed_url TEXT,
     cover_type TEXT CHECK (cover_type IN ('image', 'video')) DEFAULT 'image',
     cover_url TEXT,
+    gallery_urls TEXT[] DEFAULT '{}',
+    music_url TEXT,
     rsvp_deadline DATE NOT NULL,
     status TEXT CHECK (status IN ('active', 'closed', 'archived')) DEFAULT 'active',
     created_by UUID REFERENCES auth.users(id),
@@ -1631,6 +1640,10 @@ CREATE TRIGGER on_auth_user_created
 -- ==========================================
 -- 3. Enable Row Level Security (RLS)
 -- ==========================================
+-- Compatibilidad: agrega columnas nuevas a instalaciones existentes de eventos
+ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS gallery_urls TEXT[] DEFAULT '{}';
+ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS music_url TEXT;
+
 ALTER TABLE public.eventos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rsvps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;

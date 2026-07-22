@@ -15,6 +15,8 @@ export interface Event {
   map_embed_url: string;
   cover_type: 'image' | 'video';
   cover_url: string;
+  gallery_urls?: string[]; // fotos adicionales para la sección "Nuestra Historia"
+  music_url?: string; // audio de fondo del micrositio
   rsvp_deadline: string;
   status: 'active' | 'closed' | 'archived'; // active, closed, archived
   created_by: string; // user id
