@@ -17,6 +17,8 @@ export interface Event {
   cover_url: string;
   gallery_urls?: string[]; // fotos adicionales para la sección "Nuestra Historia"
   music_url?: string; // audio de fondo del micrositio
+  show_branding?: boolean; // si es false, oculta el botón "AURA STUDIO" que regresa a la landing (invitación privada)
+  public_showcase?: boolean; // si es true, aparece en la vitrina pública de invitaciones de la landing
   rsvp_deadline: string;
   status: 'active' | 'closed' | 'archived'; // active, closed, archived
   created_by: string; // user id

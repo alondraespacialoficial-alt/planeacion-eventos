@@ -735,6 +735,32 @@ export const AppService = {
     return all.find(e => e.id === id) || null;
   },
 
+  // Public showcase: only events explicitly authorized by their owner (public_showcase = true)
+  // and currently active, for display on the public landing page.
+  async getPublicShowcaseEvents(limit: number = 6): Promise<Event[]> {
+    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
+      try {
+        const { data, error } = await supabase
+          .from('eventos')
+          .select('*')
+          .eq('status', 'active')
+          .eq('public_showcase', true)
+          .order('date', { ascending: true })
+          .limit(limit);
+        if (error) throw error;
+        return (data || []) as Event[];
+      } catch (err) {
+        console.error('Error fetching public showcase events, trying fallback...', err);
+      }
+    }
+
+    // Fallback Local Storage
+    const all = LocalStorageDB.getEvents();
+    return all
+      .filter(e => e.status === 'active' && e.public_showcase === true)
+      .slice(0, limit);
+  },
+
   async createEvent(event: Omit<Event, 'id' | 'created_at' | 'created_by'>, currentUser: UserSession): Promise<Event> {
     const newEvent: Event = {
       ...event,
@@ -1447,6 +1473,8 @@ CREATE TABLE IF NOT EXISTS public.eventos (
     cover_url TEXT,
     gallery_urls TEXT[] DEFAULT '{}',
     music_url TEXT,
+    show_branding BOOLEAN DEFAULT true,
+    public_showcase BOOLEAN DEFAULT false,
     rsvp_deadline DATE NOT NULL,
     status TEXT CHECK (status IN ('active', 'closed', 'archived')) DEFAULT 'active',
     created_by UUID REFERENCES auth.users(id),
@@ -1643,6 +1671,8 @@ CREATE TRIGGER on_auth_user_created
 -- Compatibilidad: agrega columnas nuevas a instalaciones existentes de eventos
 ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS gallery_urls TEXT[] DEFAULT '{}';
 ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS music_url TEXT;
+ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS show_branding BOOLEAN DEFAULT true;
+ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS public_showcase BOOLEAN DEFAULT false;
 
 ALTER TABLE public.eventos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rsvps ENABLE ROW LEVEL SECURITY;

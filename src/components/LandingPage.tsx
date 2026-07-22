@@ -37,7 +37,7 @@ import {
   Minus
 } from 'lucide-react';
 import { AppService } from '../lib/supabase';
-import { LandingConfig, Service } from '../types';
+import { LandingConfig, Service, Event } from '../types';
 import { generateQuotePdf } from '../lib/pdfGenerator';
 
 const GALLERY_ITEMS: Array<{
@@ -128,6 +128,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
   });
 
   const [services, setServices] = useState<Service[]>([]);
+  const [showcaseEvents, setShowcaseEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Form State for Public Quote Form
@@ -166,6 +167,8 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         }
         const loadedServices = await AppService.getServices();
         setServices(loadedServices.filter(s => s.is_visible));
+        const loadedShowcase = await AppService.getPublicShowcaseEvents();
+        setShowcaseEvents(loadedShowcase);
       } catch (err) {
         console.error('Error loading landing page data', err);
       } finally {
@@ -469,6 +472,42 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
           </div>
         </div>
       </section>
+
+      {/* SECTION: Vitrina pública de invitaciones autorizadas por sus clientes */}
+      {showcaseEvents.length > 0 && (
+        <section id="invitaciones-clientes" className="py-20 border-t border-gray-900 bg-[#090a0d] px-6 relative">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+              <p className="text-[10px] tracking-[0.3em] font-mono text-amber-500 uppercase mb-2">Casos reales</p>
+              <h2 className="font-serif text-3xl md:text-4xl text-white font-light">Invitaciones que hemos creado</h2>
+              <p className="text-gray-400 text-sm font-light mt-3 max-w-xl mx-auto">Ejemplos autorizados por nuestros clientes para compartir su experiencia con nuestras invitaciones digitales.</p>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {showcaseEvents.map((evt) => (
+                <div key={evt.id} className="rounded-xl overflow-hidden border border-gray-800 bg-[#0d0e11] group">
+                  <div className="aspect-video relative overflow-hidden">
+                    {evt.cover_type === 'video' ? (
+                      <video muted loop autoPlay playsInline className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700" src={evt.cover_url} />
+                    ) : (
+                      <img src={evt.cover_url} alt={evt.title} className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700" referrerPolicy="no-referrer" />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0d0e11] via-transparent to-transparent"></div>
+                  </div>
+                  <div className="p-5">
+                    <p className="font-serif text-white text-base font-medium mb-3">{evt.title}</p>
+                    <button
+                      onClick={() => onNavigate(`event/${evt.id}`)}
+                      className="w-full py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500 hover:text-black text-amber-500 text-[10px] font-mono font-bold tracking-widest transition-colors"
+                    >
+                      VER INVITACIÓN
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* SECTION: Quienes Somos (About Section) */}
       <section id="about" className="py-24 border-t border-gray-900 bg-[#090a0d] px-6 relative">

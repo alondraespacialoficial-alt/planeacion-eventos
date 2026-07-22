@@ -227,16 +227,18 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.04)_0,transparent_100%)]"></div>
 
         {/* Floating Controls */}
-        <div className="absolute top-6 left-6 z-30">
-          <button 
-            onClick={() => onNavigate('landing')}
-            className="px-4 py-2 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 hover:border-amber-500/50 text-[10px] tracking-widest font-mono text-gray-300 hover:text-white transition-all flex items-center gap-2"
-            id="microsite-back-home"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            AURA STUDIO
-          </button>
-        </div>
+        {event.show_branding !== false && (
+          <div className="absolute top-6 left-6 z-30">
+            <button 
+              onClick={() => onNavigate('landing')}
+              className="px-4 py-2 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 hover:border-amber-500/50 text-[10px] tracking-widest font-mono text-gray-300 hover:text-white transition-all flex items-center gap-2"
+              id="microsite-back-home"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              AURA STUDIO
+            </button>
+          </div>
+        )}
 
         <div className="absolute top-6 right-6 z-30 flex items-center gap-2">
           {event.music_url && (

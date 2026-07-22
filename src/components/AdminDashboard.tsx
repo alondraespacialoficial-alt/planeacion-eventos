@@ -116,6 +116,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   const [evtClientEmail, setEvtClientEmail] = useState('');
   const [evtGalleryUrls, setEvtGalleryUrls] = useState<string[]>([]);
   const [evtMusicUrl, setEvtMusicUrl] = useState('');
+  const [evtShowBranding, setEvtShowBranding] = useState(true);
+  const [evtPublicShowcase, setEvtPublicShowcase] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState('');
   const [uploadingGallery, setUploadingGallery] = useState(false);
@@ -321,6 +323,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     setEvtClientEmail('');
     setEvtGalleryUrls([]);
     setEvtMusicUrl('');
+    setEvtShowBranding(true);
+    setEvtPublicShowcase(false);
     setUploadedFileName('');
     setIsEventFormOpen(true);
   };
@@ -340,6 +344,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     setEvtClientEmail(evt.client_email);
     setEvtGalleryUrls(evt.gallery_urls || []);
     setEvtMusicUrl(evt.music_url || '');
+    setEvtShowBranding(evt.show_branding !== false);
+    setEvtPublicShowcase(evt.public_showcase === true);
     setIsEventFormOpen(true);
   };
 
@@ -363,6 +369,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
         cover_url: evtCoverUrl || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=1200',
         gallery_urls: evtGalleryUrls,
         music_url: evtMusicUrl,
+        show_branding: evtShowBranding,
+        public_showcase: evtPublicShowcase,
         rsvp_deadline: evtRsvpDeadline,
         status: (editingEventId ? events.find(ev => ev.id === editingEventId)?.status : 'active') || 'active',
         client_email: evtClientEmail.trim().toLowerCase()
@@ -2099,6 +2107,23 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                   <input type="file" onChange={handleMusicFileChange} accept="audio/*" className="absolute inset-0 opacity-0 cursor-pointer" />
                   {uploadingMusic ? <p className="text-amber-500">Subiendo audio...</p> : <p className="text-gray-500">Arrastre o seleccione un archivo de audio (mp3) para almacenar en Supabase Storage</p>}
                 </div>
+              </div>
+
+              <div className="space-y-3 border border-gray-800 rounded-lg p-4 bg-black/20">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input type="checkbox" checked={evtShowBranding} onChange={(e) => setEvtShowBranding(e.target.checked)} className="mt-0.5 accent-amber-500" />
+                  <span>
+                    <span className="block text-white font-medium">Mostrar marca "Aura Studio" en el micrositio</span>
+                    <span className="block text-gray-500 text-[10px] mt-0.5">Si se desactiva, se oculta el botón de regreso a nuestra landing page. Útil para invitaciones 100% privadas donde el cliente no quiere que los invitados naveguen fuera de su invitación.</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input type="checkbox" checked={evtPublicShowcase} onChange={(e) => setEvtPublicShowcase(e.target.checked)} className="mt-0.5 accent-amber-500" />
+                  <span>
+                    <span className="block text-white font-medium">Autorizar en la vitrina pública de invitaciones</span>
+                    <span className="block text-gray-500 text-[10px] mt-0.5">Solo las invitaciones autorizadas aquí aparecerán en la sección de ejemplos de la landing page. Requiere confirmación explícita del cliente.</span>
+                  </span>
+                </label>
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
