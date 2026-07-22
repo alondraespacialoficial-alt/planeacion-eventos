@@ -35,10 +35,13 @@ export default function App() {
       } else if (hash === '#dashboard') {
         setCurrentRoute('dashboard');
         setEventId(null);
-      } else {
+      } else if (hash === '' || hash === '#') {
         setCurrentRoute('landing');
         setEventId(null);
       }
+      // Any other hash (e.g. '#ceremony-details', '#rsvp-section') is an in-page
+      // anchor used for smooth scrolling within the current view, not a route.
+      // Ignore it so it doesn't kick the user back to the landing page.
     };
 
     // Run on mount

@@ -464,7 +464,6 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
 
               <div className="flex items-center justify-between border-t border-gray-800/60 pt-4">
                 <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Sincronización en vivo</span>
-                <span className="text-[10px] text-amber-500 font-mono font-semibold uppercase tracking-widest">Activo en Base de Datos</span>
               </div>
             </motion.div>
           </div>
