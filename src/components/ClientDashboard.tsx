@@ -891,6 +891,22 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
           )}
 
           {/* TAB 3: RSVP ASSISTANTS LIST */}
+          {activeTab === 'rsvps' && !selectedEvent && (
+            <div className="rounded-2xl border border-gray-800 bg-[#0d0e12] p-10 text-center">
+              <QrCode className="w-10 h-10 text-amber-500/40 mx-auto mb-4 animate-pulse" />
+              <h3 className="font-serif text-xl text-white mb-1">Aún no tienes una invitación digital asignada</h3>
+              <p className="text-xs text-gray-400 max-w-md mx-auto leading-relaxed mt-2">
+                Los pases QR y la lista de invitados se generan a partir de tu tarjeta/micrositio de invitación. Tu asesor todavía no ha dado de alta el evento en tu cuenta, por lo que aún no hay nada que mostrar aquí. En cuanto se cree tu invitación digital, verás en esta sección los confirmados, acompañantes y códigos QR de acceso.
+              </p>
+              <button
+                onClick={() => setActiveTab('quotes')}
+                className="mt-6 px-6 py-2.5 rounded-full bg-[#13151a] hover:bg-amber-500 hover:text-black border border-amber-500/30 text-amber-500 font-mono text-[10px] tracking-widest font-bold transition-all"
+              >
+                VER MIS COTIZACIONES
+              </button>
+            </div>
+          )}
+
           {activeTab === 'rsvps' && selectedEvent && (
             <div className="space-y-8">
               {/* RSVP cards summary panel */}
