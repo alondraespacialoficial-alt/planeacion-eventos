@@ -13,6 +13,7 @@ import {
   MessageCircle, 
   User, 
   ChevronRight, 
+  ChevronLeft, 
   MapPin, 
   Calendar, 
   Clock, 
@@ -49,6 +50,7 @@ const GALLERY_ITEMS: Array<{
   cover_url: string;
   cover_type: 'image' | 'video';
   description: string;
+  media: Array<{ url: string; type: 'image' | 'video' }>;
 }> = [
   {
     id: 'gal-1',
@@ -58,7 +60,13 @@ const GALLERY_ITEMS: Array<{
     location: 'Hacienda de los Morales, CDMX',
     cover_url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1200',
     cover_type: 'image',
-    description: 'Montaje de luces arquitectónicas, video 4K cinematográfico e iluminación DMX personalizada para 250 invitados.'
+    description: 'Montaje de luces arquitectónicas, video 4K cinematográfico e iluminación DMX personalizada para 250 invitados.',
+    media: [
+      { url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1530023367847-a683933f4172?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1571501679680-de32f1e7aad4?auto=format&fit=crop&q=90&w=1600', type: 'image' }
+    ]
   },
   {
     id: 'gal-2',
@@ -68,7 +76,12 @@ const GALLERY_ITEMS: Array<{
     location: 'Castillo de Chapultepec, CDMX',
     cover_url: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=1200',
     cover_type: 'image',
-    description: 'Producción escénica monumental con pantalla LED gigante, pirotecnia fría y cobertura con drones en directo.'
+    description: 'Producción escénica monumental con pantalla LED gigante, pirotecnia fría y cobertura con drones en directo.',
+    media: [
+      { url: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1546032996-6dfacbacbf3f?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=90&w=1600', type: 'image' }
+    ]
   },
   {
     id: 'gal-3',
@@ -78,7 +91,12 @@ const GALLERY_ITEMS: Array<{
     location: 'Jardín Las Flores, Cuernavaca',
     cover_url: 'https://assets.mixkit.co/videos/preview/mixkit-celebration-sparklers-in-a-party-night-40244-large.mp4',
     cover_type: 'video',
-    description: 'Espectáculo de luces robóticas, pista iluminada de cristal y show audiovisual para quinceañera.'
+    description: 'Espectáculo de luces robóticas, pista iluminada de cristal y show audiovisual para quinceañera.',
+    media: [
+      { url: 'https://assets.mixkit.co/videos/preview/mixkit-celebration-sparklers-in-a-party-night-40244-large.mp4', type: 'video' },
+      { url: 'https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&q=90&w=1600', type: 'image' }
+    ]
   },
   {
     id: 'gal-4',
@@ -88,7 +106,12 @@ const GALLERY_ITEMS: Array<{
     location: 'Jardín Borda, Cuernavaca',
     cover_url: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=1200',
     cover_type: 'image',
-    description: 'Decoración floral de autor, banquetes gourmet a 4 tiempos y coordinación integral sin contratiempos.'
+    description: 'Decoración floral de autor, banquetes gourmet a 4 tiempos y coordinación integral sin contratiempos.',
+    media: [
+      { url: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1494783367193-149034c05e8f?auto=format&fit=crop&q=90&w=1600', type: 'image' }
+    ]
   },
   {
     id: 'gal-5',
@@ -98,7 +121,12 @@ const GALLERY_ITEMS: Array<{
     location: 'Hotel St. Regis, CDMX',
     cover_url: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&q=80&w=1200',
     cover_type: 'image',
-    description: 'Sonorización HD multipunto, transmisión en vivo simultánea e invitaciones digitales con control de asistencia QR.'
+    description: 'Sonorización HD multipunto, transmisión en vivo simultánea e invitaciones digitales con control de asistencia QR.',
+    media: [
+      { url: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&q=90&w=1600', type: 'image' }
+    ]
   },
   {
     id: 'gal-6',
@@ -108,7 +136,13 @@ const GALLERY_ITEMS: Array<{
     location: 'Salón Real, Polanco',
     cover_url: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&q=80&w=1200',
     cover_type: 'image',
-    description: 'Catering gourmet, cabina de fotos interactiva 360 y diseño ambiental con iluminación neón cálida.'
+    description: 'Catering gourmet, cabina de fotos interactiva 360 y diseño ambiental con iluminación neón cálida.',
+    media: [
+      { url: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1470019693664-1d202d2c0907?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?auto=format&fit=crop&q=90&w=1600', type: 'image' }
+    ]
   }
 ];
 
@@ -146,7 +180,8 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [guestsCount, setGuestsCount] = useState<number>(100);
   const [galleryFilter, setGalleryFilter] = useState<string>('todos');
-  const [activeModalMedia, setActiveModalMedia] = useState<{ url: string; type: 'image' | 'video'; title: string } | null>(null);
+  const [activeGalleryItem, setActiveGalleryItem] = useState<typeof GALLERY_ITEMS[number] | null>(null);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [activeServiceDetail, setActiveServiceDetail] = useState<{ title: string; description: string; image_url?: string; price: string; categoryLabel?: string } | null>(null);
   const [lastSubmittedFolio, setLastSubmittedFolio] = useState<string>('COT-2026-001');
 
@@ -758,7 +793,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
               >
                 <div 
                   className="relative h-56 overflow-hidden cursor-pointer bg-black/60"
-                  onClick={() => setActiveModalMedia({ url: item.cover_url, type: item.cover_type, title: item.title })}
+                  onClick={() => { setActiveGalleryItem(item); setActiveMediaIndex(0); }}
                 >
                   {item.cover_type === 'video' ? (
                     <video 
@@ -783,6 +818,12 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                     {item.categoryLabel}
                   </span>
 
+                  {item.media.length > 1 && (
+                    <span className="absolute top-3 right-3 px-2 py-1 rounded bg-black/80 border border-gray-700 text-gray-300 font-mono text-[9px] uppercase tracking-widest font-bold">
+                      +{item.media.length} fotos
+                    </span>
+                  )}
+
                   <div className="absolute bottom-3 right-3 h-8 w-8 rounded-full bg-black/70 border border-amber-500/40 flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform">
                     <Maximize2 className="w-4 h-4" />
                   </div>
@@ -806,35 +847,97 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
 
       {/* Lightbox Modal for Gallery Media */}
       <AnimatePresence>
-        {activeModalMedia && (
+        {activeGalleryItem && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 md:p-8"
-            onClick={() => setActiveModalMedia(null)}
+            onClick={() => setActiveGalleryItem(null)}
           >
             <div 
-              className="relative max-w-4xl w-full bg-[#0d0e12] border border-gray-800 rounded-2xl overflow-hidden shadow-2xl"
+              className="relative max-w-5xl w-full bg-[#0d0e12] border border-gray-800 rounded-2xl overflow-hidden shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
               <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-black/40">
-                <h4 className="font-serif text-base text-white font-medium">{activeModalMedia.title}</h4>
-                <button 
-                  onClick={() => setActiveModalMedia(null)}
-                  className="p-1.5 rounded-full hover:bg-gray-800 text-gray-400 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div>
+                  <h4 className="font-serif text-base text-white font-medium">{activeGalleryItem.title}</h4>
+                  <p className="text-[11px] text-gray-400 font-mono flex items-center gap-1 mt-0.5">
+                    <MapPin className="w-3 h-3 shrink-0 text-amber-500" />
+                    {activeGalleryItem.location}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {activeGalleryItem.media.length > 1 && (
+                    <span className="text-[11px] font-mono text-gray-400">{activeMediaIndex + 1} / {activeGalleryItem.media.length}</span>
+                  )}
+                  <button 
+                    onClick={() => setActiveGalleryItem(null)}
+                    className="p-1.5 rounded-full hover:bg-gray-800 text-gray-400 hover:text-white"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
-              <div className="p-2 bg-black flex items-center justify-center min-h-[300px] max-h-[70vh]">
-                {activeModalMedia.type === 'video' ? (
-                  <video src={activeModalMedia.url} controls autoPlay className="max-h-[65vh] w-auto rounded-lg" />
+              <div className="relative p-2 bg-black flex items-center justify-center min-h-[300px] h-[60vh] md:h-[65vh]">
+                {activeGalleryItem.media[activeMediaIndex].type === 'video' ? (
+                  <video 
+                    key={activeGalleryItem.media[activeMediaIndex].url}
+                    src={activeGalleryItem.media[activeMediaIndex].url} 
+                    controls 
+                    autoPlay 
+                    className="max-h-full max-w-full w-auto h-auto rounded-lg" 
+                  />
                 ) : (
-                  <img src={activeModalMedia.url} alt={activeModalMedia.title} className="max-h-[65vh] w-auto object-contain rounded-lg" referrerPolicy="no-referrer" />
+                  <img 
+                    key={activeGalleryItem.media[activeMediaIndex].url}
+                    src={activeGalleryItem.media[activeMediaIndex].url} 
+                    alt={activeGalleryItem.title} 
+                    className="max-h-full max-w-full w-auto h-auto object-contain rounded-lg" 
+                    referrerPolicy="no-referrer" 
+                  />
+                )}
+
+                {activeGalleryItem.media.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setActiveMediaIndex(prev => (prev - 1 + activeGalleryItem.media.length) % activeGalleryItem.media.length)}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/70 border border-gray-700 hover:border-amber-500/60 flex items-center justify-center text-gray-300 hover:text-amber-500 transition-colors"
+                      aria-label="Foto anterior"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setActiveMediaIndex(prev => (prev + 1) % activeGalleryItem.media.length)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/70 border border-gray-700 hover:border-amber-500/60 flex items-center justify-center text-gray-300 hover:text-amber-500 transition-colors"
+                      aria-label="Foto siguiente"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </>
                 )}
               </div>
+
+              {activeGalleryItem.media.length > 1 && (
+                <div className="flex gap-2 p-3 border-t border-gray-800 bg-black/30 overflow-x-auto">
+                  {activeGalleryItem.media.map((m, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setActiveMediaIndex(i)}
+                      className={`shrink-0 h-14 w-20 rounded-lg overflow-hidden border-2 transition-colors ${
+                        i === activeMediaIndex ? 'border-amber-500' : 'border-transparent opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      {m.type === 'video' ? (
+                        <video src={m.url} className="w-full h-full object-cover" muted />
+                      ) : (
+                        <img src={m.url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </motion.div>
         )}
