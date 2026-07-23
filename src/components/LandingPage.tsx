@@ -147,6 +147,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
   const [guestsCount, setGuestsCount] = useState<number>(100);
   const [galleryFilter, setGalleryFilter] = useState<string>('todos');
   const [activeModalMedia, setActiveModalMedia] = useState<{ url: string; type: 'image' | 'video'; title: string } | null>(null);
+  const [activeServiceDetail, setActiveServiceDetail] = useState<{ title: string; description: string; image_url?: string; price: string; categoryLabel?: string } | null>(null);
   const [lastSubmittedFolio, setLastSubmittedFolio] = useState<string>('COT-2026-001');
 
   // Interactive Estimator Calculations
@@ -614,10 +615,13 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {services.map((srv, idx) => (
+            {services.map((srv, idx) => {
+              const categoryLabel = srv.category === 'visual' ? 'Producción Visual' : srv.category === 'planning' ? 'Planeación' : 'Invitación';
+              return (
               <div 
                 key={idx} 
-                className="overflow-hidden rounded-xl border border-gray-800 bg-[#0d0e11] hover:border-gray-700 transition-all group shadow-md"
+                className="overflow-hidden rounded-xl border border-gray-800 bg-[#0d0e11] hover:border-amber-500/40 transition-all group shadow-md cursor-pointer"
+                onClick={() => setActiveServiceDetail({ title: srv.title, description: srv.description, image_url: srv.image_url, price: srv.price_estimated, categoryLabel })}
               >
                 <div className="h-48 overflow-hidden relative">
                   <img 
@@ -627,7 +631,10 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                     referrerPolicy="no-referrer"
                   />
                   <div className="absolute top-3 left-3 px-2 py-1 rounded bg-black/75 border border-amber-500/20 text-[9px] font-mono tracking-widest text-amber-500 uppercase font-semibold">
-                    {srv.category === 'visual' ? 'Producción Visual' : srv.category === 'planning' ? 'Planeación' : 'Invitación'}
+                    {categoryLabel}
+                  </div>
+                  <div className="absolute bottom-3 right-3 h-8 w-8 rounded-full bg-black/70 border border-amber-500/40 flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform">
+                    <Maximize2 className="w-4 h-4" />
                   </div>
                 </div>
                 <div className="p-6 space-y-4">
@@ -637,7 +644,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                   <div className="flex items-center justify-between pt-4 border-t border-gray-800/60 text-xs">
                     <span className="text-gray-500 font-mono">Estimado: <strong className="text-amber-500 font-medium">{srv.price_estimated}</strong></span>
                     <button 
-                      onClick={() => triggerDirectWA(srv.title)}
+                      onClick={(e) => { e.stopPropagation(); triggerDirectWA(srv.title); }}
                       className="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500 hover:bg-amber-500 hover:text-black font-mono text-[10px] tracking-widest font-bold transition-all"
                     >
                       SOLICITAR INFO
@@ -645,48 +652,58 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
 
             {/* Always visible fallback / basic items since user asked explicitly for recording, catering, waiters, decoration */}
-            <div className="overflow-hidden rounded-xl border border-gray-800 bg-[#0d0e11] hover:border-gray-700 transition-all group shadow-md p-6 flex flex-col justify-between">
+            <div 
+              className="overflow-hidden rounded-xl border border-gray-800 bg-[#0d0e11] hover:border-amber-500/40 transition-all group shadow-md p-6 flex flex-col justify-between cursor-pointer"
+              onClick={() => setActiveServiceDetail({ title: 'Banquete & Servicio de Meseros', description: 'Catering de gala a 3 o 4 tiempos, mixología premium y equipo de meseros profesionales uniformados con protocolo de etiqueta estricto. Nuestro equipo se encarga de la coordinación completa del servicio en mesa, tiempos de cocina y montaje de barra, garantizando una experiencia impecable de principio a fin para tus invitados.', price: 'Desde $850 MXN / persona', categoryLabel: 'Banquetes' })}
+            >
               <div className="space-y-4">
                 <div className="p-2.5 w-fit rounded-lg bg-amber-500/10 border border-amber-500/20">
                   <Users className="w-5 h-5 text-amber-500" />
                 </div>
                 <h4 className="font-serif text-lg text-white font-medium">Banquete & Servicio de Meseros</h4>
-                <p className="text-gray-400 text-xs font-light leading-relaxed">Catering de gala a 3 o 4 tiempos, mixología premium y equipo de meseros profesionales uniformados con protocolo de etiqueta estricto.</p>
+                <p className="text-gray-400 text-xs font-light leading-relaxed line-clamp-3">Catering de gala a 3 o 4 tiempos, mixología premium y equipo de meseros profesionales uniformados con protocolo de etiqueta estricto.</p>
               </div>
               <div className="pt-6 border-t border-gray-800/60 mt-4 flex items-center justify-between text-xs">
                 <span className="text-gray-500 font-mono">Desde $850 MXN / persona</span>
-                <button onClick={() => triggerDirectWA('Servicio de Banquete y Meseros')} className="text-amber-500 font-mono text-[10px] tracking-widest font-bold uppercase hover:underline">Cotizar</button>
+                <button onClick={(e) => { e.stopPropagation(); triggerDirectWA('Servicio de Banquete y Meseros'); }} className="text-amber-500 font-mono text-[10px] tracking-widest font-bold uppercase hover:underline">Cotizar</button>
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-gray-800 bg-[#0d0e11] hover:border-gray-700 transition-all group shadow-md p-6 flex flex-col justify-between">
+            <div 
+              className="overflow-hidden rounded-xl border border-gray-800 bg-[#0d0e11] hover:border-amber-500/40 transition-all group shadow-md p-6 flex flex-col justify-between cursor-pointer"
+              onClick={() => setActiveServiceDetail({ title: 'Decoración, Flores & Flores de Diseño', description: 'Diseño floral exclusivo, arcos ceremoniales, centros de mesa interactivos con iluminación de bajo consumo, carpas de lujo y mobiliario lounge. Trabajamos con proveedores especializados en flor de temporada e importada, adaptando cada propuesta al concepto y paleta de color de tu evento.', price: 'Personalizado según escala', categoryLabel: 'Decoración' })}
+            >
               <div className="space-y-4">
                 <div className="p-2.5 w-fit rounded-lg bg-amber-500/10 border border-amber-500/20">
                   <Briefcase className="w-5 h-5 text-amber-500" />
                 </div>
                 <h4 className="font-serif text-lg text-white font-medium">Decoración, Flores & Flores de Diseño</h4>
-                <p className="text-gray-400 text-xs font-light leading-relaxed">Diseño floral exclusivo, arcos ceremoniales, centros de mesa interactivos con iluminación de bajo consumo, carpas de lujo y mobiliario lounge.</p>
+                <p className="text-gray-400 text-xs font-light leading-relaxed line-clamp-3">Diseño floral exclusivo, arcos ceremoniales, centros de mesa interactivos con iluminación de bajo consumo, carpas de lujo y mobiliario lounge.</p>
               </div>
               <div className="pt-6 border-t border-gray-800/60 mt-4 flex items-center justify-between text-xs">
                 <span className="text-gray-500 font-mono">Personalizado según escala</span>
-                <button onClick={() => triggerDirectWA('Decoración y Diseño de Espacios')} className="text-amber-500 font-mono text-[10px] tracking-widest font-bold uppercase hover:underline">Cotizar</button>
+                <button onClick={(e) => { e.stopPropagation(); triggerDirectWA('Decoración y Diseño de Espacios'); }} className="text-amber-500 font-mono text-[10px] tracking-widest font-bold uppercase hover:underline">Cotizar</button>
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-gray-800 bg-[#0d0e11] hover:border-gray-700 transition-all group shadow-md p-6 flex flex-col justify-between">
+            <div 
+              className="overflow-hidden rounded-xl border border-gray-800 bg-[#0d0e11] hover:border-amber-500/40 transition-all group shadow-md p-6 flex flex-col justify-between cursor-pointer"
+              onClick={() => setActiveServiceDetail({ title: 'Grabación de Audio, DJ & Audio Envolvente', description: 'Sistemas de audio multizona lineal (L-Acoustics), DJs residentes calificados, microfonía Shure Axient inalámbrica y grabación multipista de discursos en vivo. Ideal para ceremonias, recepciones y after-party, con cobertura de sonido uniforme en todo el recinto.', price: 'Desde $12,500 MXN', categoryLabel: 'Audio & Música' })}
+            >
               <div className="space-y-4">
                 <div className="p-2.5 w-fit rounded-lg bg-amber-500/10 border border-amber-500/20">
                   <Music className="w-5 h-5 text-amber-500" />
                 </div>
                 <h4 className="font-serif text-lg text-white font-medium">Grabación de Audio, DJ & Audio Envolvente</h4>
-                <p className="text-gray-400 text-xs font-light leading-relaxed">Sistemas de audio multizona lineal (L-Acoustics), DJs residentes calificados, microfonía Shure Axient inalámbrica y grabación multipista de discursos en vivo.</p>
+                <p className="text-gray-400 text-xs font-light leading-relaxed line-clamp-3">Sistemas de audio multizona lineal (L-Acoustics), DJs residentes calificados, microfonía Shure Axient inalámbrica y grabación multipista de discursos en vivo.</p>
               </div>
               <div className="pt-6 border-t border-gray-800/60 mt-4 flex items-center justify-between text-xs">
                 <span className="text-gray-500 font-mono">Desde $12,500 MXN</span>
-                <button onClick={() => triggerDirectWA('Audio Profesional y DJ')} className="text-amber-500 font-mono text-[10px] tracking-widest font-bold uppercase hover:underline">Cotizar</button>
+                <button onClick={(e) => { e.stopPropagation(); triggerDirectWA('Audio Profesional y DJ'); }} className="text-amber-500 font-mono text-[10px] tracking-widest font-bold uppercase hover:underline">Cotizar</button>
               </div>
             </div>
           </div>
@@ -819,6 +836,67 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                 )}
               </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Detail Modal for "Especialidades a la carta" service cards */}
+      <AnimatePresence>
+        {activeServiceDetail && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 md:p-8"
+            onClick={() => setActiveServiceDetail(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="relative max-w-2xl w-full max-h-[85vh] overflow-y-auto bg-[#0d0e12] border border-gray-800 rounded-2xl shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <button 
+                onClick={() => setActiveServiceDetail(null)}
+                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/70 hover:bg-gray-800 text-gray-300 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {activeServiceDetail.image_url && (
+                <div className="h-64 md:h-72 w-full overflow-hidden relative">
+                  <img 
+                    src={activeServiceDetail.image_url} 
+                    alt={activeServiceDetail.title} 
+                    className="w-full h-full object-cover" 
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0d0e12] via-transparent to-transparent" />
+                  {activeServiceDetail.categoryLabel && (
+                    <div className="absolute top-4 left-4 px-2.5 py-1 rounded bg-black/75 border border-amber-500/20 text-[10px] font-mono tracking-widest text-amber-500 uppercase font-semibold">
+                      {activeServiceDetail.categoryLabel}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="p-6 md:p-8 space-y-5">
+                <h4 className="font-serif text-2xl md:text-3xl text-white font-medium">{activeServiceDetail.title}</h4>
+                <p className="text-gray-300 text-sm font-light leading-relaxed whitespace-pre-line">{activeServiceDetail.description}</p>
+
+                <div className="flex flex-wrap items-center justify-between gap-4 pt-5 border-t border-gray-800/60">
+                  <span className="text-gray-400 font-mono text-xs">Estimado: <strong className="text-amber-500 font-medium">{activeServiceDetail.price}</strong></span>
+                  <button 
+                    onClick={() => { triggerDirectWA(activeServiceDetail.title); setActiveServiceDetail(null); }}
+                    className="px-5 py-2.5 rounded-lg bg-amber-500 text-black hover:bg-amber-400 font-mono text-xs tracking-widest font-bold transition-all"
+                  >
+                    SOLICITAR INFO POR WHATSAPP
+                  </button>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
