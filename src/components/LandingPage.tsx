@@ -35,7 +35,8 @@ import {
   Plus,
   Minus,
   Menu,
-  ChevronDown
+  ChevronDown,
+  Search
 } from 'lucide-react';
 import { AppService } from '../lib/supabase';
 import { LandingConfig, Service, Event, GalleryItem } from '../types';
@@ -102,6 +103,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [galleryFilter, setGalleryFilter] = useState<string>('todos');
+  const [gallerySearch, setGallerySearch] = useState<string>('');
   const [activeGalleryItem, setActiveGalleryItem] = useState<GalleryItem | null>(null);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [activeServiceDetail, setActiveServiceDetail] = useState<{ title: string; description: string; image_url?: string; price: string; categoryLabel?: string } | null>(null);
@@ -124,6 +126,19 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
   const calculatedWaiters = getWaitersCount(guestsCount);
   const calculatedWaitersTotal = calculatedWaiters * WAITER_COST;
   const totalPreliminar = calculatedFoodTotal + calculatedWaitersTotal;
+
+  // Filtro combinado de la galería: por categoría (tabs) y por texto libre (nombre, lugar, descripción)
+  const filteredGalleryItems = galleryItems
+    .filter(item => galleryFilter === 'todos' || item.category === galleryFilter)
+    .filter(item => {
+      const query = gallerySearch.trim().toLowerCase();
+      if (!query) return true;
+      return (
+        item.title.toLowerCase().includes(query) ||
+        item.location.toLowerCase().includes(query) ||
+        item.description.toLowerCase().includes(query)
+      );
+    });
 
   // Categorías del cotizador: solo alimentos + meseros se calculan automático, el resto es referencia para cotización personalizada
   const QUOTE_CATEGORIES = [
@@ -739,11 +754,23 @@ ${extraStr}`;
                 </button>
               ))}
             </div>
+
+            {/* Search Input */}
+            <div className="relative max-w-md mx-auto mt-6">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <input
+                type="text"
+                value={gallerySearch}
+                onChange={(e) => setGallerySearch(e.target.value)}
+                placeholder="Buscar por nombre, lugar o descripción..."
+                className="w-full pl-11 pr-4 py-3 rounded-full bg-[#0d0e12] border border-gray-800 text-white text-xs font-light placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition-colors"
+              />
+            </div>
           </div>
 
           {/* Gallery Items Grid */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {galleryItems.filter(item => galleryFilter === 'todos' || item.category === galleryFilter).map(item => (
+            {filteredGalleryItems.map(item => (
               <motion.div
                 key={item.id}
                 layout
@@ -804,6 +831,12 @@ ${extraStr}`;
               </motion.div>
             ))}
           </div>
+
+          {filteredGalleryItems.length === 0 && (
+            <p className="text-center text-gray-500 text-xs font-mono mt-10">
+              No encontramos producciones que coincidan con tu búsqueda.
+            </p>
+          )}
         </div>
       </section>
 
