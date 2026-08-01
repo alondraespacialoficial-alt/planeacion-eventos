@@ -69,6 +69,13 @@ function AdaptiveServiceImage({ src, alt, className, imgClassName }: { src: stri
   );
 }
 
+function getServiceCategoryLabel(category: Service['category']): string {
+  return category === 'visual' ? 'Producción Visual'
+    : category === 'planning' ? 'Planeación de Eventos'
+    : category === 'invitations' ? 'Tarjetas / Invitaciones'
+    : 'Otros Servicios';
+}
+
 export default function LandingPage({ onNavigate }: LandingPageProps) {
   const [config, setConfig] = useState<LandingConfig>({
     hero_title: 'Celebra tu Evento',
@@ -109,6 +116,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
   const [activeServiceDetail, setActiveServiceDetail] = useState<{ title: string; description: string; image_url?: string; price: string; categoryLabel?: string } | null>(null);
   const [lastSubmittedFolio, setLastSubmittedFolio] = useState<string>('COT-2026-001');
   const [activeLegalDoc, setActiveLegalDoc] = useState<'privacy' | 'terms' | null>(null);
+  const [quickServiceSearch, setQuickServiceSearch] = useState('');
 
   // Estimador inicial de alimentos y personal (base preliminar, no cotiza el evento completo)
   const FOOD_PRICES: Record<'Taquiza' | 'Cazuelada' | 'Pozolada', number> = { Taquiza: 90, Cazuelada: 90, Pozolada: 120 };
@@ -139,6 +147,14 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         item.description.toLowerCase().includes(query)
       );
     });
+
+  // Buscador rápido del hero (visitantes sin sesión): filtra el catálogo de servicios por título/descripción
+  const quickServiceResults = quickServiceSearch.trim()
+    ? services.filter(srv => {
+        const query = quickServiceSearch.trim().toLowerCase();
+        return srv.title.toLowerCase().includes(query) || srv.description.toLowerCase().includes(query);
+      }).slice(0, 4)
+    : [];
 
   // Categorías del cotizador: solo alimentos + meseros se calculan automático, el resto es referencia para cotización personalizada
   const QUOTE_CATEGORIES = [
@@ -534,6 +550,56 @@ ${extraStr}`;
         </div>
       </section>
 
+      {/* SECTION: Buscador rápido de servicios (visible sin necesidad de iniciar sesión) */}
+      <section className="py-10 border-t border-gray-900 bg-[#08090c] px-6">
+        <div className="max-w-3xl mx-auto">
+          <p className="text-center text-gray-400 text-xs font-light mb-4">
+            ¿Buscas un servicio en específico? Escribe aquí y te mostramos opciones al instante, sin necesidad de crear una cuenta.
+          </p>
+          <div className="relative">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <input
+              type="text"
+              value={quickServiceSearch}
+              onChange={(e) => setQuickServiceSearch(e.target.value)}
+              placeholder="Ej. fotografía, dron, banquete, decoración..."
+              id="hero-quick-service-search"
+              className="w-full pl-12 pr-4 py-4 rounded-full bg-[#0d0e12] border border-gray-800 text-white text-sm font-light placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition-colors"
+            />
+          </div>
+
+          {quickServiceSearch.trim() && (
+            <div className="mt-4 rounded-2xl border border-gray-800 bg-[#0d0e12] overflow-hidden divide-y divide-gray-800/60">
+              {quickServiceResults.length > 0 ? (
+                quickServiceResults.map((srv, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setActiveServiceDetail({ title: srv.title, description: srv.description, image_url: srv.image_url, price: srv.price_estimated, categoryLabel: getServiceCategoryLabel(srv.category) });
+                      setQuickServiceSearch('');
+                    }}
+                    className="w-full text-left px-5 py-3.5 flex items-center justify-between gap-4 hover:bg-amber-500/5 transition-colors"
+                  >
+                    <div>
+                      <p className="text-white text-sm font-serif">{srv.title}</p>
+                      <p className="text-gray-500 text-[10px] font-mono uppercase tracking-wider mt-0.5">{getServiceCategoryLabel(srv.category)}</p>
+                    </div>
+                    <span className="text-amber-500 text-xs font-mono shrink-0">{srv.price_estimated}</span>
+                  </button>
+                ))
+              ) : (
+                <div className="px-5 py-4 text-center">
+                  <p className="text-gray-500 text-xs">No encontramos ese servicio en nuestro catálogo.</p>
+                  <a href="#servicios-detallados" className="text-amber-500 text-xs font-mono underline underline-offset-4 mt-1 inline-block">
+                    Ver catálogo completo
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* SECTION: Vitrina pública de invitaciones autorizadas por sus clientes */}
       {showcaseEvents.length > 0 && (
         <section id="invitaciones-clientes" className="py-20 border-t border-gray-900 bg-[#090a0d] px-6 relative">
@@ -676,10 +742,7 @@ ${extraStr}`;
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {services.map((srv, idx) => {
-              const categoryLabel = srv.category === 'visual' ? 'Producción Visual'
-                : srv.category === 'planning' ? 'Planeación de Eventos'
-                : srv.category === 'invitations' ? 'Tarjetas / Invitaciones'
-                : 'Otros Servicios';
+              const categoryLabel = getServiceCategoryLabel(srv.category);
               return (
               <div 
                 key={idx} 
