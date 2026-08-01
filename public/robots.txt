@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://planeaslp.com/sitemap.xml

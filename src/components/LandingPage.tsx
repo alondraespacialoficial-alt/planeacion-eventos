@@ -34,7 +34,8 @@ import {
   X,
   Plus,
   Minus,
-  Menu
+  Menu,
+  ChevronDown
 } from 'lucide-react';
 import { AppService } from '../lib/supabase';
 import { LandingConfig, Service, Event, GalleryItem } from '../types';
@@ -47,12 +48,12 @@ interface LandingPageProps {
 export default function LandingPage({ onNavigate }: LandingPageProps) {
   const [config, setConfig] = useState<LandingConfig>({
     hero_title: 'Celebra tu Evento',
-    hero_subtitle: 'Planeador de Eventos & Producción Visual Premium',
+    hero_subtitle: 'Planeador de Eventos & Producción Visual Premium en San Luis Potosí',
     hero_image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=1600',
-    about_text: 'En Celebra tu Evento transformamos tus ideas en celebraciones legendarias. Fusionamos el arte de la planeación meticulosa, diseño de experiencias exclusivas y producción visual de alta fidelidad, con innovadoras invitaciones digitales que garantizan una gestión de asistentes impecable.',
+    about_text: 'En Celebra tu Evento transformamos tus ideas en celebraciones legendarias en San Luis Potosí y alrededores. Fusionamos el arte de la planeación meticulosa, diseño de experiencias exclusivas y producción visual de alta fidelidad, con innovadoras invitaciones digitales que garantizan una gestión de asistentes impecable.',
     whatsapp_phone: '5214444237092',
     logo_url: '',
-    business_address: 'Av. Paseo de la Reforma 250, Juárez, 06600 Ciudad de México, CDMX'
+    business_address: 'San Luis Potosí, S.L.P., México'
   });
 
   const [services, setServices] = useState<Service[]>([]);
@@ -76,6 +77,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
   const [guestsCount, setGuestsCount] = useState<number>(30);
   const [foodType, setFoodType] = useState<'Taquiza' | 'Cazuelada' | 'Pozolada'>('Taquiza');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [galleryFilter, setGalleryFilter] = useState<string>('todos');
   const [activeGalleryItem, setActiveGalleryItem] = useState<GalleryItem | null>(null);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
@@ -108,6 +110,25 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
     { title: 'Show y animación', note: 'Show Charlitron desde $2,100' },
     { title: 'Invitaciones digitales', note: 'Invitaciones interactivas desde $250' },
     { title: 'Restauración y enmarcado', note: 'Restauración de fotografías y enmarcado desde $200' }
+  ];
+
+  const FAQ_ITEMS = [
+    {
+      question: '¿Qué servicios para eventos ofrecen en San Luis Potosí?',
+      answer: 'Ofrecemos taquiza, cazuelada y pozolada, producción visual (foto, video y dron), barras y snacks, meseros y hostess, show y animación, invitaciones digitales interactivas, y restauración y enmarcado de fotografías, todo con precotización preliminar inmediata por WhatsApp.'
+    },
+    {
+      question: '¿Hacen taquizas o cazueladas para eventos grandes en SLP?',
+      answer: 'Sí, calculamos el costo de alimentos y meseros según tu número de invitados directamente en nuestro precotizador en línea, desde 30 hasta 300 personas.'
+    },
+    {
+      question: '¿Cómo funciona la precotización preliminar?',
+      answer: 'Eliges los servicios e ingresas tu número de invitados en el formulario del sitio; el sistema calcula una estimación automática y te la enviamos por WhatsApp para afinar los detalles y darte una cotización real.'
+    },
+    {
+      question: '¿También ofrecen invitaciones digitales para bodas y XV años en San Luis Potosí?',
+      answer: 'Sí, diseñamos invitaciones digitales interactivas con confirmación de asistencia (RSVP), ideales para bodas, XV años, graduaciones y eventos corporativos.'
+    }
   ];
 
   useEffect(() => {
@@ -324,6 +345,7 @@ ${extraStr}`;
             <a href="#galeria-producciones" className="hover:text-amber-500 transition-colors uppercase">GALERÍA</a>
             <a href="#servicios-detallados" className="hover:text-amber-500 transition-colors uppercase">SERVICIOS</a>
             <a href="#cotizador-rapido" className="hover:text-amber-500 transition-colors uppercase">COTIZADOR</a>
+            <a href="#preguntas-frecuentes" className="hover:text-amber-500 transition-colors uppercase">FAQ</a>
           </nav>
 
           <div className="flex items-center gap-3">
@@ -362,6 +384,7 @@ ${extraStr}`;
                 <a href="#galeria-producciones" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-gray-900 hover:text-amber-500 transition-colors uppercase">GALERÍA</a>
                 <a href="#servicios-detallados" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-gray-900 hover:text-amber-500 transition-colors uppercase">SERVICIOS</a>
                 <a href="#cotizador-rapido" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-b border-gray-900 hover:text-amber-500 transition-colors uppercase">COTIZADOR</a>
+                <a href="#preguntas-frecuentes" onClick={() => setMobileMenuOpen(false)} className="py-3 border-b border-gray-900 hover:text-amber-500 transition-colors uppercase">FAQ</a>
               </nav>
             </motion.div>
           )}
@@ -1172,7 +1195,7 @@ ${extraStr}`;
                       <label className="block text-gray-400 text-[11px] uppercase font-mono tracking-widest mb-2 font-semibold">CIUDAD DE REALIZACIÓN *</label>
                       <input 
                         type="text"
-                        placeholder="Ej. CDMX, Cuernavaca, Acapulco"
+                        placeholder="Ej. San Luis Potosí, Soledad, Villa de Reyes"
                         required
                         value={quoteForm.city}
                         onChange={(e) => setQuoteForm(prev => ({ ...prev, city: e.target.value }))}
@@ -1286,6 +1309,48 @@ ${extraStr}`;
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION: FAQ (coincide con el FAQPage schema en index.html) */}
+      <section id="preguntas-frecuentes" className="py-24 border-t border-gray-900 bg-[#090a0d] px-6">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-amber-500 font-mono text-xs tracking-[0.4em] uppercase font-bold mb-3">PREGUNTAS FRECUENTES</p>
+            <h2 className="font-serif text-3xl md:text-4xl text-white font-light tracking-tight">
+              Todo sobre nuestros eventos en <span className="italic text-amber-500">San Luis Potosí</span>
+            </h2>
+          </div>
+          <div className="space-y-3">
+            {FAQ_ITEMS.map((item, idx) => {
+              const isOpen = openFaqIndex === idx;
+              return (
+                <div key={idx} className="border border-gray-800 rounded-xl bg-[#0a0b0d] overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
+                    className="w-full flex items-center justify-between gap-4 py-4 px-5 text-left cursor-pointer"
+                  >
+                    <span className="text-white text-sm md:text-base font-medium">{item.question}</span>
+                    <ChevronDown className={`w-4 h-4 text-amber-500 shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="overflow-hidden"
+                      >
+                        <p className="text-gray-400 text-sm font-light leading-relaxed px-5 pb-5">{item.answer}</p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

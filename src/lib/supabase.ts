@@ -300,12 +300,12 @@ const DEFAULT_QUOTES: Quote[] = [
 
 const DEFAULT_LANDING_CONFIG: LandingConfig = {
   hero_title: 'Celebra tu Evento',
-  hero_subtitle: 'Planeación de Eventos & Producción Visual Premium',
+  hero_subtitle: 'Planeación de Eventos & Producción Visual Premium en San Luis Potosí',
   hero_image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=1600',
-  about_text: 'En Celebra tu Evento transformamos tus ideas en celebraciones legendarias. Fusionamos el arte de la planeación meticulosa, diseño de experiencias exclusivas y producción visual de alta fidelidad, con innovadoras invitaciones digitales que garantizan una gestión de asistentes impecable.',
+  about_text: 'En Celebra tu Evento transformamos tus ideas en celebraciones legendarias en San Luis Potosí y alrededores. Fusionamos el arte de la planeación meticulosa, diseño de experiencias exclusivas y producción visual de alta fidelidad, con innovadoras invitaciones digitales que garantizan una gestión de asistentes impecable.',
   whatsapp_phone: '5214444237092',
   logo_url: '',
-  business_address: 'Av. Paseo de la Reforma 250, Juárez, 06600 Ciudad de México, CDMX'
+  business_address: 'San Luis Potosí, S.L.P., México'
 };
 
 const DEFAULT_PAYMENTS: PaymentReceipt[] = [
@@ -1816,12 +1816,12 @@ INSERT INTO public.landing_config (id, hero_title, hero_subtitle, hero_image, ab
 VALUES (
     'current',
     'Celebra tu Evento',
-    'Planeación de Eventos & Producción Visual Premium',
+    'Planeación de Eventos & Producción Visual Premium en San Luis Potosí',
     'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=1600',
-    'En Celebra tu Evento transformamos tus ideas en celebraciones legendarias. Fusionamos el arte de la planeación meticulosa, diseño de experiencias exclusivas y producción visual de alta fidelidad, con innovadoras invitaciones digitales que garantizan una gestión de asistentes impecable.',
+    'En Celebra tu Evento transformamos tus ideas en celebraciones legendarias en San Luis Potosí y alrededores. Fusionamos el arte de la planeación meticulosa, diseño de experiencias exclusivas y producción visual de alta fidelidad, con innovadoras invitaciones digitales que garantizan una gestión de asistentes impecable.',
     '5214444237092',
     '',
-    'Av. Paseo de la Reforma 250, Juárez, 06600 Ciudad de México, CDMX'
+    'San Luis Potosí, S.L.P., México'
 )
 ON CONFLICT (id) DO NOTHING;
 
