@@ -82,6 +82,19 @@ const DEFAULT_EVENTS: Event[] = [
       'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?auto=format&fit=crop&q=80&w=800'
     ],
     music_url: '',
+    dress_code: 'Formal / Etiqueta rigurosa',
+    dress_code_note: 'Evitar el color blanco y tonos pastel (reservados para la novia).',
+    itinerary: [
+      { time: '17:30', label: 'Ceremonia religiosa' },
+      { time: '19:00', label: 'Cóctel de bienvenida' },
+      { time: '20:30', label: 'Recepción y cena' },
+      { time: '22:00', label: 'Baile y fiesta' }
+    ],
+    gift_registry: [
+      { store: 'Liverpool', url: 'https://www.liverpool.com.mx/tienda/mesa-de-regalos' },
+      { store: 'Amazon', url: 'https://www.amazon.com.mx/wedding/registry' }
+    ],
+    restrictions_note: 'Evento solo para adultos, agradecemos no traer niños.',
     rsvp_deadline: '2026-10-31',
     status: 'active',
     created_by: 'client-user-id',
