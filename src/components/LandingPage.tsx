@@ -24,8 +24,6 @@ import {
   DollarSign,
   Users,
   Award,
-  Music,
-  Briefcase,
   Download,
   RefreshCw,
   ArrowUp,
@@ -587,58 +585,6 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
               </div>
               );
             })}
-
-            {/* Always visible fallback / basic items since user asked explicitly for recording, catering, waiters, decoration */}
-            <div 
-              className="overflow-hidden rounded-xl border border-gray-800 bg-[#0d0e11] hover:border-amber-500/40 transition-all group shadow-md p-6 flex flex-col justify-between cursor-pointer"
-              onClick={() => setActiveServiceDetail({ title: 'Banquete & Servicio de Meseros', description: 'Catering de gala a 3 o 4 tiempos, mixología premium y equipo de meseros profesionales uniformados con protocolo de etiqueta estricto. Nuestro equipo se encarga de la coordinación completa del servicio en mesa, tiempos de cocina y montaje de barra, garantizando una experiencia impecable de principio a fin para tus invitados.', price: 'Desde $850 MXN / persona', categoryLabel: 'Banquetes' })}
-            >
-              <div className="space-y-4">
-                <div className="p-2.5 w-fit rounded-lg bg-amber-500/10 border border-amber-500/20">
-                  <Users className="w-5 h-5 text-amber-500" />
-                </div>
-                <h4 className="font-serif text-lg text-white font-medium">Banquete & Servicio de Meseros</h4>
-                <p className="text-gray-400 text-xs font-light leading-relaxed line-clamp-3">Catering de gala a 3 o 4 tiempos, mixología premium y equipo de meseros profesionales uniformados con protocolo de etiqueta estricto.</p>
-              </div>
-              <div className="pt-6 border-t border-gray-800/60 mt-4 flex items-center justify-between text-xs">
-                <span className="text-gray-500 font-mono">Desde $850 MXN / persona</span>
-                <button onClick={(e) => { e.stopPropagation(); triggerDirectWA('Servicio de Banquete y Meseros'); }} className="text-amber-500 font-mono text-[10px] tracking-widest font-bold uppercase hover:underline">Cotizar</button>
-              </div>
-            </div>
-
-            <div 
-              className="overflow-hidden rounded-xl border border-gray-800 bg-[#0d0e11] hover:border-amber-500/40 transition-all group shadow-md p-6 flex flex-col justify-between cursor-pointer"
-              onClick={() => setActiveServiceDetail({ title: 'Decoración, Flores & Flores de Diseño', description: 'Diseño floral exclusivo, arcos ceremoniales, centros de mesa interactivos con iluminación de bajo consumo, carpas de lujo y mobiliario lounge. Trabajamos con proveedores especializados en flor de temporada e importada, adaptando cada propuesta al concepto y paleta de color de tu evento.', price: 'Personalizado según escala', categoryLabel: 'Decoración' })}
-            >
-              <div className="space-y-4">
-                <div className="p-2.5 w-fit rounded-lg bg-amber-500/10 border border-amber-500/20">
-                  <Briefcase className="w-5 h-5 text-amber-500" />
-                </div>
-                <h4 className="font-serif text-lg text-white font-medium">Decoración, Flores & Flores de Diseño</h4>
-                <p className="text-gray-400 text-xs font-light leading-relaxed line-clamp-3">Diseño floral exclusivo, arcos ceremoniales, centros de mesa interactivos con iluminación de bajo consumo, carpas de lujo y mobiliario lounge.</p>
-              </div>
-              <div className="pt-6 border-t border-gray-800/60 mt-4 flex items-center justify-between text-xs">
-                <span className="text-gray-500 font-mono">Personalizado según escala</span>
-                <button onClick={(e) => { e.stopPropagation(); triggerDirectWA('Decoración y Diseño de Espacios'); }} className="text-amber-500 font-mono text-[10px] tracking-widest font-bold uppercase hover:underline">Cotizar</button>
-              </div>
-            </div>
-
-            <div 
-              className="overflow-hidden rounded-xl border border-gray-800 bg-[#0d0e11] hover:border-amber-500/40 transition-all group shadow-md p-6 flex flex-col justify-between cursor-pointer"
-              onClick={() => setActiveServiceDetail({ title: 'Grabación de Audio, DJ & Audio Envolvente', description: 'Sistemas de audio multizona lineal (L-Acoustics), DJs residentes calificados, microfonía Shure Axient inalámbrica y grabación multipista de discursos en vivo. Ideal para ceremonias, recepciones y after-party, con cobertura de sonido uniforme en todo el recinto.', price: 'Desde $12,500 MXN', categoryLabel: 'Audio & Música' })}
-            >
-              <div className="space-y-4">
-                <div className="p-2.5 w-fit rounded-lg bg-amber-500/10 border border-amber-500/20">
-                  <Music className="w-5 h-5 text-amber-500" />
-                </div>
-                <h4 className="font-serif text-lg text-white font-medium">Grabación de Audio, DJ & Audio Envolvente</h4>
-                <p className="text-gray-400 text-xs font-light leading-relaxed line-clamp-3">Sistemas de audio multizona lineal (L-Acoustics), DJs residentes calificados, microfonía Shure Axient inalámbrica y grabación multipista de discursos en vivo.</p>
-              </div>
-              <div className="pt-6 border-t border-gray-800/60 mt-4 flex items-center justify-between text-xs">
-                <span className="text-gray-500 font-mono">Desde $12,500 MXN</span>
-                <button onClick={(e) => { e.stopPropagation(); triggerDirectWA('Audio Profesional y DJ'); }} className="text-amber-500 font-mono text-[10px] tracking-widest font-bold uppercase hover:underline">Cotizar</button>
-              </div>
-            </div>
           </div>
         </div>
       </section>
