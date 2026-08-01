@@ -401,10 +401,10 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
         <div className="hidden print:block p-8 bg-white text-black font-sans min-h-screen">
           <div className="flex justify-between items-start border-b-2 border-amber-500 pb-6 mb-6">
             <div>
-              <h1 className="font-serif text-3xl font-bold tracking-widest text-amber-600 uppercase">CHARLITRON</h1>
+              <h1 className="font-serif text-3xl font-bold tracking-widest text-amber-600 uppercase">CELEBRA TU EVENTO</h1>
               <p className="text-[10px] tracking-[0.2em] text-gray-500 font-mono uppercase">Planeación de Eventos & Producción Visual</p>
               <p className="text-xs text-gray-600 mt-2">Av. Paseo de la Reforma 250, Juárez, CDMX</p>
-              <p className="text-xs text-gray-600">Tel: +52 1 55 1234 5678 | Email: contacto@charlitron.com</p>
+              <p className="text-xs text-gray-600">Tel: +52 1 55 1234 5678 | Email: contacto@celebratuevento.com</p>
             </div>
             <div className="text-right">
               <span className="inline-block px-3 py-1 rounded bg-amber-500/10 text-amber-800 text-xs font-mono font-bold tracking-wider uppercase mb-2">
@@ -426,7 +426,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
             <div className="p-4 bg-gray-50 rounded-lg flex flex-col justify-between">
               <div>
                 <h4 className="font-bold text-gray-800 uppercase font-mono tracking-wider mb-1">CONTRATISTA</h4>
-                <p className="font-semibold text-gray-900">Charlitron S.A. de C.V.</p>
+                <p className="font-semibold text-gray-900">Celebra tu Evento S.A. de C.V.</p>
               </div>
               <p className="text-[10px] text-gray-500 italic">Vigencia: 30 días naturales a partir de la fecha de emisión.</p>
             </div>
@@ -492,7 +492,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
               <p className="font-mono text-gray-400 font-normal mt-1">{selectedQuote.client_name}</p>
             </div>
             <div className="border-t border-gray-400 pt-4">
-              <p>Firma Autorizada Charlitron</p>
+              <p>Firma Autorizada Celebra tu Evento</p>
               <p className="font-serif italic text-amber-600 mt-1">Director de Planeación</p>
             </div>
           </div>
@@ -510,7 +510,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
               </div>
               <div>
                 <p className="text-[9px] tracking-[0.25em] text-amber-500 font-mono uppercase font-bold">PORTAL DE CLIENTES</p>
-                <h2 className="text-sm font-serif font-semibold text-white tracking-wide">Charlitron | Experiencias</h2>
+                <h2 className="text-sm font-serif font-semibold text-white tracking-wide">Celebra tu Evento | Experiencias</h2>
               </div>
             </div>
 
@@ -1265,7 +1265,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                     <span className="text-[10px] font-mono tracking-[0.3em] text-amber-500 uppercase font-bold">COORDINACIÓN INTEGRAL</span>
                     <h3 className="font-serif text-2xl text-white font-light mt-1">Alineación de Proveedores del Evento</h3>
                     <p className="text-xs text-gray-400 font-light mt-1 max-w-xl leading-relaxed">
-                      Lleva el control centralizado de tus otros proveedores (Florista, Fotógrafo, Repostería, Maquillaje, etc.) para que el equipo de logística de Charlitron garantice una coordinación perfecta el día del evento.
+                      Lleva el control centralizado de tus otros proveedores (Florista, Fotógrafo, Repostería, Maquillaje, etc.) para que el equipo de logística de Celebra tu Evento garantice una coordinación perfecta el día del evento.
                     </p>
                   </div>
 
@@ -1413,7 +1413,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
             </button>
 
             <div className="bg-gradient-to-r from-amber-600 to-amber-500 text-black py-2.5 px-4 rounded-xl font-mono text-[11px] font-bold tracking-widest uppercase mb-6 flex items-center justify-center gap-2">
-              <Ticket className="w-4 h-4" /> PASE DIGITAL CHARLITRON
+              <Ticket className="w-4 h-4" /> PASE DIGITAL CELEBRA TU EVENTO
             </div>
 
             <h3 className="font-serif text-2xl text-white font-semibold">{selectedPassRsvp.name}</h3>

@@ -299,10 +299,10 @@ const DEFAULT_QUOTES: Quote[] = [
 ];
 
 const DEFAULT_LANDING_CONFIG: LandingConfig = {
-  hero_title: 'Charlitron',
+  hero_title: 'Celebra tu Evento',
   hero_subtitle: 'Planeación de Eventos & Producción Visual Premium',
   hero_image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=1600',
-  about_text: 'En Charlitron transformamos tus ideas en celebraciones legendarias. Fusionamos el arte de la planeación meticulosa, diseño de experiencias exclusivas y producción visual de alta fidelidad, con innovadoras invitaciones digitales que garantizan una gestión de asistentes impecable.',
+  about_text: 'En Celebra tu Evento transformamos tus ideas en celebraciones legendarias. Fusionamos el arte de la planeación meticulosa, diseño de experiencias exclusivas y producción visual de alta fidelidad, con innovadoras invitaciones digitales que garantizan una gestión de asistentes impecable.',
   whatsapp_phone: '5214444237092',
   logo_url: '',
   business_address: 'Av. Paseo de la Reforma 250, Juárez, 06600 Ciudad de México, CDMX'
@@ -322,7 +322,7 @@ const DEFAULT_PAYMENTS: PaymentReceipt[] = [
     concept: 'Anticipo 50% para apartado de fecha Boda',
     reference_code: 'SPEI-88294021',
     status: 'verified',
-    notes: 'Pago recibido y verificado en cuenta BBVA Charlitron.'
+    notes: 'Pago recibido y verificado en cuenta BBVA Celebra tu Evento.'
   },
   {
     id: 'pay-2',
@@ -360,7 +360,7 @@ const DEFAULT_VENDORS: VendorItem[] = [
     event_id: 'boda-ale-sebas',
     client_email: 'cliente@ejemplo.com',
     category: 'Fotógrafo & Video',
-    vendor_name: 'Charlitron Visual Studio',
+    vendor_name: 'Celebra tu Evento Visual Studio',
     contact_phone: '5214444237092',
     status: 'contratado',
     amount_agreed: 25000,
@@ -1815,10 +1815,10 @@ ALTER TABLE public.gallery_items ADD CONSTRAINT gallery_items_category_check
 INSERT INTO public.landing_config (id, hero_title, hero_subtitle, hero_image, about_text, whatsapp_phone, logo_url, business_address)
 VALUES (
     'current',
-    'Charlitron Eventos',
+    'Celebra tu Evento',
     'Planeación de Eventos & Producción Visual Premium',
     'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=1600',
-    'En Charlitron transformamos tus ideas en celebraciones legendarias. Fusionamos el arte de la planeación meticulosa, diseño de experiencias exclusivas y producción visual de alta fidelidad, con innovadoras invitaciones digitales que garantizan una gestión de asistentes impecable.',
+    'En Celebra tu Evento transformamos tus ideas en celebraciones legendarias. Fusionamos el arte de la planeación meticulosa, diseño de experiencias exclusivas y producción visual de alta fidelidad, con innovadoras invitaciones digitales que garantizan una gestión de asistentes impecable.',
     '5214444237092',
     '',
     'Av. Paseo de la Reforma 250, Juárez, 06600 Ciudad de México, CDMX'

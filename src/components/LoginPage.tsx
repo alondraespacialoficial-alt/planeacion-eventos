@@ -126,7 +126,7 @@ export default function LoginPage({ onLoginSuccess, onNavigate }: LoginPageProps
             >
               <Sparkles className="w-5 h-5 text-amber-400 group-hover:rotate-12 transition-transform" />
             </div>
-            <h2 className="font-serif text-2xl text-white font-light tracking-wide uppercase">CHARLITRON PORTAL</h2>
+            <h2 className="font-serif text-2xl text-white font-light tracking-wide uppercase">CELEBRA TU EVENTO PORTAL</h2>
             <p className="text-[10px] font-mono tracking-wider text-gray-500 mt-1">ORGANIZADORES & CLIENTES</p>
           </div>
 

@@ -490,7 +490,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
                     {/* QR Code Container */}
                     <div className="bg-white p-4 rounded-2xl w-48 h-48 mx-auto flex items-center justify-center border-4 border-amber-500/40 shadow-inner my-4 relative">
                       <img 
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${submittedRsvp?.pass_code || 'PASS-DIGITAL-CHARLITRON'}`} 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${submittedRsvp?.pass_code || 'PASS-DIGITAL-CELEBRATUEVENTO'}`} 
                         alt="Código QR de Acceso" 
                         className="w-full h-full object-contain"
                       />

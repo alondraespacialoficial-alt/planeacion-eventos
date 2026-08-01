@@ -57,7 +57,7 @@ export function generateQuotePdf(data: QuotePdfData): void {
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
-  doc.text('CHARLITRON PRODUCCIONES', margin, 14);
+  doc.text('CELEBRA TU EVENTO', margin, 14);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -243,7 +243,7 @@ export function generateQuotePdf(data: QuotePdfData): void {
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text('Charlitron Producciones Audiovisuales & Logística de Eventos', pageWidth / 2, footerY + 6, { align: 'center' });
+  doc.text('Celebra tu Evento - Producción Audiovisual & Logística de Eventos', pageWidth / 2, footerY + 6, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(180, 180, 180);
@@ -251,5 +251,5 @@ export function generateQuotePdf(data: QuotePdfData): void {
   doc.text(contactStr, pageWidth / 2, footerY + 11, { align: 'center' });
 
   // Save the PDF
-  doc.save(`Cotizacion_Charlitron_${data.folio}.pdf`);
+  doc.save(`Cotizacion_CelebraTuEvento_${data.folio}.pdf`);
 }

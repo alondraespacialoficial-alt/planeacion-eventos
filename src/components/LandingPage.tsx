@@ -47,10 +47,10 @@ interface LandingPageProps {
 
 export default function LandingPage({ onNavigate }: LandingPageProps) {
   const [config, setConfig] = useState<LandingConfig>({
-    hero_title: 'Charlitron',
+    hero_title: 'Celebra tu Evento',
     hero_subtitle: 'Planeador de Eventos & Producción Visual Premium',
     hero_image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=1600',
-    about_text: 'En Charlitron transformamos tus ideas en celebraciones legendarias. Fusionamos el arte de la planeación meticulosa, diseño de experiencias exclusivas y producción visual de alta fidelidad, con innovadoras invitaciones digitales que garantizan una gestión de asistentes impecable.',
+    about_text: 'En Celebra tu Evento transformamos tus ideas en celebraciones legendarias. Fusionamos el arte de la planeación meticulosa, diseño de experiencias exclusivas y producción visual de alta fidelidad, con innovadoras invitaciones digitales que garantizan una gestión de asistentes impecable.',
     whatsapp_phone: '5214444237092',
     logo_url: '',
     business_address: 'Av. Paseo de la Reforma 250, Juárez, 06600 Ciudad de México, CDMX'
@@ -151,7 +151,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
       const servicesStr = quoteForm.selected_services.length > 0 
         ? quoteForm.selected_services.join(', ') 
         : 'Información general de servicios';
-      const formattedMessage = `¡Hola Charlitron! Me gustaría cotizar mi evento (Folio: ${folioNum}):
+      const formattedMessage = `¡Hola Celebra tu Evento! Me gustaría cotizar mi evento (Folio: ${folioNum}):
 • *Nombre:* ${quoteForm.name}
 • *Teléfono:* ${quoteForm.phone}
 • *Ciudad:* ${quoteForm.city}
@@ -194,7 +194,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
     generateQuotePdf({
       folio: lastSubmittedFolio,
       date: today,
-      clientName: quoteForm.name || 'Cliente Charlitron',
+      clientName: quoteForm.name || 'Cliente Celebra tu Evento',
       clientPhone: quoteForm.phone || 'N/A',
       city: quoteForm.city || 'CDMX',
       eventType: quoteForm.event_type || 'Evento Especial',
@@ -254,7 +254,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
   ];
 
   const triggerDirectWA = (serviceName: string) => {
-    const formattedMessage = `Hola Charlitron, me interesa cotizar de forma directa el servicio: *${serviceName}*. ¿Me podrían dar más detalles?`;
+    const formattedMessage = `Hola Celebra tu Evento, me interesa cotizar de forma directa el servicio: *${serviceName}*. ¿Me podrían dar más detalles?`;
     const waUrl = `https://wa.me/${config.whatsapp_phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(formattedMessage)}`;
     window.open(waUrl, '_blank');
   };
@@ -327,7 +327,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
               className="font-serif text-5xl md:text-6xl lg:text-7xl font-extralight tracking-tight text-white mb-6 leading-[1.1]"
             >
               Celebra con <br />
-              <span className="font-serif italic font-normal text-amber-500">Impecable Distinción</span>
+              <span className="font-serif italic font-normal text-amber-500">Estilo y Distinción</span>
             </motion.h2>
 
             <motion.p 
@@ -336,7 +336,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="text-gray-300 text-sm md:text-base max-w-xl mb-8 font-light leading-relaxed"
             >
-              En <strong className="text-amber-500 font-medium">{config.hero_title}</strong> elevamos cada instante de tu boda, graduación o gala exclusiva. Fusionamos la coordinación logística meticulosa y la producción audiovisual artística de alto calibre con la interactividad de nuestras tarjetas digitales de vanguardia.
+              En <strong className="text-amber-500 font-medium">{config.hero_title}</strong> diseñamos experiencias memorables para bodas, graduaciones, celebraciones sociales y eventos especiales. Combinamos organización, presentación visual y soluciones digitales como invitaciones interactivas para ayudarte a crear un evento más práctico, atractivo y bien cuidado.
             </motion.p>
 
             <motion.div 
@@ -351,14 +351,14 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                 id="hero-scroll-quote-btn"
               >
                 <Sliders className="w-4 h-4" />
-                COTIZAR AL INSTANTE
+                COTIZAR MI EVENTO
                 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </a>
               <a 
                 href="#servicios-detallados"
                 className="px-7 py-4 rounded-full border border-gray-700 hover:border-amber-500/40 hover:bg-amber-500/5 text-gray-300 hover:text-white text-[11px] tracking-widest font-mono font-bold transition-all flex items-center justify-center gap-2"
               >
-                EXPLORAR SERVICIOS
+                VER SERVICIOS DISPONIBLES
               </a>
             </motion.div>
           </div>
@@ -377,7 +377,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
               </div>
 
               <h4 className="font-serif text-xl text-white font-medium mb-1">Invitaciones Digitales</h4>
-              <p className="text-gray-400 text-xs font-light mb-6">Prueba la experiencia de confirmación RSVP interactiva de nuestra demo activa:</p>
+              <p className="text-gray-400 text-xs font-light mb-6">Descubre una muestra de nuestras invitaciones digitales con confirmación RSVP y experiencia interactiva para eventos.</p>
 
               <div className="rounded-xl overflow-hidden aspect-video relative mb-6 group">
                 <img 
@@ -451,7 +451,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
             <div className="absolute -bottom-4 -right-4 w-12 h-12 border-b-2 border-r-2 border-amber-500/40"></div>
             <img 
               src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=800" 
-              alt="Quiénes Somos Charlitron" 
+              alt="Quiénes Somos Celebra tu Evento" 
               className="rounded-lg shadow-2xl border border-gray-800/80 w-full object-cover aspect-[4/5]"
             />
           </div>
@@ -650,7 +650,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
             <p className="text-amber-500 font-mono text-xs tracking-[0.4em] uppercase font-bold mb-3">PORTAFOLIO AUDIOVISUAL</p>
             <h3 className="font-serif text-3xl md:text-4xl text-white font-light tracking-tight">Galería de Producciones Legendarias</h3>
             <p className="text-gray-400 text-xs font-light mt-3 leading-relaxed">
-              Explora una selección de bodas, graduaciones, XV años y galas corporativas producidas por el equipo de Charlitron.
+              Explora una selección de bodas, graduaciones, XV años y galas corporativas producidas por el equipo de Celebra tu Evento.
             </p>
 
             {/* Filter Tabs */}
@@ -931,7 +931,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                   </span>
                   <h4 className="font-serif text-2xl text-white font-medium mt-3">¡Solicitud de Cotización Registrada con Éxito!</h4>
                   <p className="text-gray-400 text-xs max-w-md mx-auto mt-2 leading-relaxed">
-                    Hemos guardado tus requerimientos en nuestro sistema Charlitron. Ya puedes descargar tu documento PDF formal o iniciar el contacto directo en WhatsApp.
+                    Hemos guardado tus requerimientos en nuestro sistema Celebra tu Evento. Ya puedes descargar tu documento PDF formal o iniciar el contacto directo en WhatsApp.
                   </p>
                 </div>
 
@@ -1199,7 +1199,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                       className="mt-1 accent-amber-500 h-4 w-4 bg-[#0a0b0d] border border-gray-800"
                     />
                     <label htmlFor="privacy-consent-box" className="text-[11px] text-gray-400 leading-relaxed font-light select-none">
-                      Doy consentimiento para que Charlitron almacene mis datos de contacto de manera segura de acuerdo con su <strong>Aviso de Privacidad</strong>, con la única finalidad de brindarme una cotización personalizada y agendar llamadas vía WhatsApp o telefónica.
+                      Doy consentimiento para que Celebra tu Evento almacene mis datos de contacto de manera segura de acuerdo con su <strong>Aviso de Privacidad</strong>, con la única finalidad de brindarme una cotización personalizada y agendar llamadas vía WhatsApp o telefónica.
                     </label>
                   </div>
                 </div>
@@ -1255,7 +1255,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
           </div>
           <div className="text-center">
             <p className="text-[11px] font-mono tracking-wider text-gray-600">
-              © 2026 CHARLITRON PLANEADOR DE EVENTOS. TODOS LOS DERECHOS RESERVADOS.
+              © 2026 CELEBRA TU EVENTO PLANEADOR DE EVENTOS. TODOS LOS DERECHOS RESERVADOS.
             </p>
             <p className="text-[10px] text-gray-600 font-mono mt-1 uppercase">
               {config.business_address}

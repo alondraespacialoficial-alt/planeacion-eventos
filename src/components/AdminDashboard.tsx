@@ -78,7 +78,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   const [leads, setLeads] = useState<Lead[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [landingConfig, setLandingConfig] = useState<LandingConfig>({
-    hero_title: 'Charlitron',
+    hero_title: 'Celebra tu Evento',
     hero_subtitle: 'Planeador de Eventos & Producción Visual Premium',
     hero_image: '',
     about_text: '',
@@ -991,7 +991,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
             </div>
             <div>
               <p className="text-[9px] tracking-[0.25em] text-amber-500 font-mono uppercase font-bold">PLATAFORMA ADMINISTRADOR</p>
-              <h2 className="text-sm font-serif font-semibold text-white tracking-wide">{landingConfig.hero_title || 'Charlitron'} | Panel de Control</h2>
+              <h2 className="text-sm font-serif font-semibold text-white tracking-wide">{landingConfig.hero_title || 'Celebra tu Evento'} | Panel de Control</h2>
             </div>
           </div>
 
@@ -1279,7 +1279,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                               clientName: q.client_name,
                               clientPhone: q.client_phone || 'N/A',
                               clientEmail: q.client_email,
-                              eventType: 'Cotización Charlitron',
+                              eventType: 'Cotización Celebra tu Evento',
                               items: q.items.map(i => ({ description: i.description, price: i.price, quantity: i.quantity, discount: i.discount })),
                               subtotal: q.subtotal,
                               discountTotal: q.discount_total,
@@ -1788,7 +1788,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                       <td className="py-4 px-6 font-serif">
                         <p className="font-semibold text-white text-sm">{lead.name}</p>
                         <a 
-                          href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}?text=Hola%20${encodeURIComponent(lead.name)},%20te%20contacto%20de%20Charlitron%20Producciones...`}
+                          href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}?text=Hola%20${encodeURIComponent(lead.name)},%20te%20contacto%20de%20Celebra%20tu%20Evento...`}
                           target="_blank"
                           rel="noreferrer"
                           className="text-emerald-400 hover:underline font-mono text-[10px] mt-0.5 flex items-center gap-1"
