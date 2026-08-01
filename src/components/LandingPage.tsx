@@ -106,6 +106,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [activeServiceDetail, setActiveServiceDetail] = useState<{ title: string; description: string; image_url?: string; price: string; categoryLabel?: string } | null>(null);
   const [lastSubmittedFolio, setLastSubmittedFolio] = useState<string>('COT-2026-001');
+  const [activeLegalDoc, setActiveLegalDoc] = useState<'privacy' | 'terms' | null>(null);
 
   // Estimador inicial de alimentos y personal (base preliminar, no cotiza el evento completo)
   const FOOD_PRICES: Record<'Taquiza' | 'Cazuelada' | 'Pozolada', number> = { Taquiza: 90, Cazuelada: 90, Pozolada: 120 };
@@ -1288,7 +1289,7 @@ ${extraStr}`;
                       className="mt-1 accent-amber-500 h-4 w-4 bg-[#0a0b0d] border border-gray-800"
                     />
                     <label htmlFor="privacy-consent-box" className="text-[11px] text-gray-400 leading-relaxed font-light select-none">
-                      Doy consentimiento para que Celebra tu Evento almacene mis datos de contacto de manera segura de acuerdo con su <strong>Aviso de Privacidad</strong>, con la única finalidad de brindarme esta precotización y, posteriormente, mi cotización real personalizada vía WhatsApp o telefónica.
+                      Doy consentimiento para que Celebra tu Evento almacene mis datos de contacto de manera segura de acuerdo con su <strong className="underline cursor-pointer hover:text-amber-500" onClick={() => setActiveLegalDoc('privacy')}>Aviso de Privacidad</strong>, con la única finalidad de brindarme esta precotización y, posteriormente, mi cotización real personalizada vía WhatsApp o telefónica.
                     </label>
                   </div>
                 </div>
@@ -1393,9 +1394,9 @@ ${extraStr}`;
             </p>
           </div>
           <div className="flex justify-center md:justify-end gap-6 text-[10px] font-mono tracking-wider text-gray-500">
-            <span className="hover:text-amber-500 cursor-pointer">Aviso de Privacidad</span>
+            <button type="button" onClick={() => setActiveLegalDoc('privacy')} className="hover:text-amber-500 transition-colors cursor-pointer">Aviso de Privacidad</button>
             <span>•</span>
-            <span className="hover:text-amber-500 cursor-pointer">Términos de Servicio</span>
+            <button type="button" onClick={() => setActiveLegalDoc('terms')} className="hover:text-amber-500 transition-colors cursor-pointer">Términos de Servicio</button>
           </div>
         </div>
       </footer>
@@ -1414,6 +1415,204 @@ ${extraStr}`;
           </span>
         </button>
       </div>
+
+      {/* Legal Modal: Aviso de Privacidad / Términos de Servicio */}
+      <AnimatePresence>
+        {activeLegalDoc && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 md:p-8"
+            onClick={() => setActiveLegalDoc(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="relative max-w-2xl w-full max-h-[85vh] overflow-y-auto bg-[#0d0e12] border border-gray-800 rounded-2xl shadow-2xl p-6 md:p-8"
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setActiveLegalDoc(null)}
+                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/70 hover:bg-gray-800 text-gray-300 hover:text-white transition-colors cursor-pointer"
+                aria-label="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {activeLegalDoc === 'privacy' ? (
+                <div className="space-y-5 pr-6">
+                  <div>
+                    <h4 className="font-serif text-2xl text-white font-medium">Aviso de Privacidad</h4>
+                    <p className="text-amber-500 text-xs font-mono mt-1">Celebra tu Evento</p>
+                    <p className="text-gray-500 text-[11px] font-mono mt-2">Última actualización: 31 de julio de 2026</p>
+                  </div>
+                  <p className="text-gray-400 text-sm font-light leading-relaxed">
+                    En Celebra tu Evento respetamos y protegemos la información personal de nuestros clientes y visitantes. Este Aviso de Privacidad explica qué datos recopilamos, para qué los usamos y cómo puedes ejercer tus derechos.
+                  </p>
+
+                  <div>
+                    <h5 className="font-serif text-white font-medium mb-1">1. Responsable de los datos</h5>
+                    <p className="text-gray-400 text-sm font-light leading-relaxed">
+                      Celebra tu Evento es responsable del tratamiento de los datos personales que nos proporciones a través de nuestra página web, redes sociales, formularios de contacto y canales de mensajería (como WhatsApp o correo electrónico). Contacto: <strong className="text-amber-500 font-normal">integrandotugente@hotmail.com</strong>
+                    </p>
+                  </div>
+
+                  <div>
+                    <h5 className="font-serif text-white font-medium mb-1">2. Datos que podemos recopilar</h5>
+                    <ul className="text-gray-400 text-sm font-light leading-relaxed list-disc list-inside space-y-1">
+                      <li>Nombre completo</li>
+                      <li>Teléfono (principalmente WhatsApp)</li>
+                      <li>Correo electrónico</li>
+                      <li>Ciudad y lugar del evento</li>
+                      <li>Tipo de evento (boda, XV años, graduación, etc.)</li>
+                      <li>Número estimado de invitados y rango de presupuesto</li>
+                      <li>Información adicional que tú decidas compartirnos sobre tu evento</li>
+                    </ul>
+                    <p className="text-gray-500 text-xs font-light mt-2">No solicitamos datos bancarios ni información financiera a través de formularios públicos.</p>
+                  </div>
+
+                  <div>
+                    <h5 className="font-serif text-white font-medium mb-1">3. Finalidades del tratamiento</h5>
+                    <ul className="text-gray-400 text-sm font-light leading-relaxed list-disc list-inside space-y-1">
+                      <li>Elaborar y enviarte cotizaciones de eventos</li>
+                      <li>Dar seguimiento a tus solicitudes y dudas</li>
+                      <li>Confirmar información necesaria para la organización del evento</li>
+                      <li>Enviarte recordatorios, actualizaciones o cambios sobre tu servicio</li>
+                      <li>Fines estadísticos internos para mejorar nuestros servicios</li>
+                    </ul>
+                    <p className="text-gray-500 text-xs font-light mt-2">Si te suscribes a alguna lista de difusión, también podremos enviarte promociones o novedades, siempre con opción a dejar de recibirlas.</p>
+                  </div>
+
+                  <div>
+                    <h5 className="font-serif text-white font-medium mb-1">4. Compartir información con terceros</h5>
+                    <p className="text-gray-400 text-sm font-light leading-relaxed">
+                      Podemos compartir parte de tus datos solo con proveedores y colaboradores relacionados con tu evento (por ejemplo, foto, video, alimentos, show, hostess, etc.), únicamente con el propósito de cotizar y coordinar el servicio que tú solicitaste. No vendemos, rentamos ni cedemos tu información personal a terceros ajenos al servicio del evento.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h5 className="font-serif text-white font-medium mb-1">5. Conservación de los datos</h5>
+                    <p className="text-gray-400 text-sm font-light leading-relaxed">
+                      Conservaremos tus datos mientras tengamos una relación activa contigo (cotización en curso o evento confirmado) y/o sea necesario para cumplir obligaciones legales o fiscales aplicables. Después de un tiempo razonable, tus datos podrán ser anonimizados o eliminados de nuestros registros activos.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h5 className="font-serif text-white font-medium mb-1">6. Derechos ARCO</h5>
+                    <p className="text-gray-400 text-sm font-light leading-relaxed">
+                      Tienes derecho a Acceder, Rectificar, Cancelar y Oponerte al uso de tus datos personales. Para ejercer estos derechos, envía un correo a <strong className="text-amber-500 font-normal">integrandotugente@hotmail.com</strong> con tu nombre completo, medio de contacto y la petición concreta. Te responderemos en un plazo razonable.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h5 className="font-serif text-white font-medium mb-1">7. Uso de cookies y tecnologías similares</h5>
+                    <p className="text-gray-400 text-sm font-light leading-relaxed">
+                      Nuestra página puede utilizar cookies y herramientas de análisis para mejorar la experiencia del usuario. Estas cookies no contienen información personal sensible y puedes desactivarlas desde la configuración de tu navegador.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h5 className="font-serif text-white font-medium mb-1">8. Cambios al Aviso de Privacidad</h5>
+                    <p className="text-gray-400 text-sm font-light leading-relaxed">
+                      Podemos actualizar este Aviso de Privacidad en cualquier momento. La versión más reciente estará siempre disponible en nuestra página.
+                    </p>
+                  </div>
+
+                  <p className="text-gray-500 text-xs font-light pt-3 border-t border-gray-800/60">
+                    Dudas sobre este Aviso de Privacidad: <strong className="text-amber-500 font-normal">integrandotugente@hotmail.com</strong>
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-5 pr-6">
+                  <div>
+                    <h4 className="font-serif text-2xl text-white font-medium">Términos y Condiciones de Servicio</h4>
+                    <p className="text-amber-500 text-xs font-mono mt-1">Celebra tu Evento</p>
+                    <p className="text-gray-500 text-[11px] font-mono mt-2">Última actualización: 31 de julio de 2026</p>
+                  </div>
+                  <p className="text-gray-400 text-sm font-light leading-relaxed">
+                    Al utilizar nuestra página web, formularios de contacto, redes sociales o servicios de cotización, aceptas los siguientes términos y condiciones:
+                  </p>
+
+                  <div>
+                    <h5 className="font-serif text-white font-medium mb-1">1. Descripción del servicio</h5>
+                    <ul className="text-gray-400 text-sm font-light leading-relaxed list-disc list-inside space-y-1">
+                      <li>Planeación y coordinación básica de eventos</li>
+                      <li>Alimentos para evento (taquizas, cazueladas, pozoladas)</li>
+                      <li>Barras y snacks</li>
+                      <li>Fotografía, video y dron en colaboración con proveedores especializados</li>
+                      <li>Hostess, edecanes y meseros</li>
+                      <li>Show infantil Charlitron y animación</li>
+                      <li>Invitaciones digitales</li>
+                      <li>Restauración y enmarcado de fotografías</li>
+                    </ul>
+                    <p className="text-gray-500 text-xs font-light mt-2">Algunos servicios son realizados directamente por nuestro equipo y otros en coordinación con colaboradores y proveedores aliados.</p>
+                  </div>
+
+                  <div>
+                    <h5 className="font-serif text-white font-medium mb-1">2. Cotizaciones y estimaciones</h5>
+                    <ul className="text-gray-400 text-sm font-light leading-relaxed list-disc list-inside space-y-1">
+                      <li>Las cotizaciones emitidas son preliminares y pueden ajustarse según cambios en fecha, lugar, invitados, horario y logística.</li>
+                      <li>La calculadora de la página web muestra un estimado inicial, no una cotización final ni un contrato.</li>
+                      <li>Toda cotización tiene una vigencia limitada; después de esa fecha podrá actualizarse sin previo aviso.</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h5 className="font-serif text-white font-medium mb-1">3. Reservaciones y pagos</h5>
+                    <ul className="text-gray-400 text-sm font-light leading-relaxed list-disc list-inside space-y-1">
+                      <li>Para confirmar un servicio se puede solicitar un anticipo, notificado en cada cotización.</li>
+                      <li>El saldo restante deberá cubrirse en las condiciones y fechas acordadas previamente.</li>
+                      <li>En caso de cancelación, las políticas de devolución de anticipo se especificarán en la cotización o acuerdo particular de cada evento.</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h5 className="font-serif text-white font-medium mb-1">4. Colaboradores y proveedores</h5>
+                    <p className="text-gray-400 text-sm font-light leading-relaxed">
+                      Trabajamos con una red de colaboradores y proveedores de confianza (taquizas y alimentos, fotógrafos y videógrafos, show y animación, hostess, edecanes y meseros). Celebra tu Evento coordina y supervisa, pero cada proveedor puede tener sus propias políticas específicas, las cuales te serán informadas en cada caso.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h5 className="font-serif text-white font-medium mb-1">5. Responsabilidades</h5>
+                    <p className="text-gray-400 text-sm font-light leading-relaxed mb-2">Nos comprometemos a tratar a cada cliente con respeto y profesionalismo, cumplir en la medida de lo posible con los servicios contratados en la fecha, hora y lugar acordados, e informar con anticipación cualquier cambio necesario por causas de fuerza mayor.</p>
+                    <p className="text-gray-400 text-sm font-light leading-relaxed mb-2">El cliente se compromete a proporcionar información veraz y actualizada, respetar horarios y condiciones pactadas, y cubrir en tiempo los pagos y anticipos acordados.</p>
+                    <p className="text-gray-500 text-xs font-light">Celebra tu Evento no será responsable por cancelaciones o cambios por causas de fuerza mayor (clima extremo, cierres de recintos, restricciones oficiales, etc.) ni por daños causados por asistentes, terceros o situaciones fuera de nuestro control directo.</p>
+                  </div>
+
+                  <div>
+                    <h5 className="font-serif text-white font-medium mb-1">6. Uso del sitio web</h5>
+                    <p className="text-gray-400 text-sm font-light leading-relaxed">
+                      El contenido del sitio (textos, imágenes, logotipos) es propiedad de Celebra tu Evento y no puede utilizarse sin autorización. Cualquier uso indebido del sitio o intento de afectar su funcionamiento puede derivar en restricciones de acceso.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h5 className="font-serif text-white font-medium mb-1">7. Actualizaciones de términos</h5>
+                    <p className="text-gray-400 text-sm font-light leading-relaxed">
+                      Podemos modificar estos Términos y Condiciones en cualquier momento. Los cambios se publicarán en nuestra página y entrarán en vigor a partir de su publicación.
+                    </p>
+                  </div>
+
+                  <p className="text-gray-500 text-xs font-light pt-3 border-t border-gray-800/60">
+                    Dudas sobre estos términos: <strong className="text-amber-500 font-normal">integrandotugente@hotmail.com</strong>
+                  </p>
+                </div>
+              )}
+
+              <button
+                onClick={() => setActiveLegalDoc(null)}
+                className="mt-6 w-full py-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-500 hover:bg-amber-500 hover:text-black font-mono text-xs tracking-widest font-bold transition-all cursor-pointer"
+              >
+                VOLVER AL SITIO
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
