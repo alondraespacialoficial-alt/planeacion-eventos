@@ -33,7 +33,8 @@ import {
   Maximize2,
   X,
   Plus,
-  Minus
+  Minus,
+  Menu
 } from 'lucide-react';
 import { AppService } from '../lib/supabase';
 import { LandingConfig, Service, Event, GalleryItem } from '../types';
@@ -74,6 +75,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [guestsCount, setGuestsCount] = useState<number>(30);
   const [foodType, setFoodType] = useState<'Taquiza' | 'Cazuelada' | 'Pozolada'>('Taquiza');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [galleryFilter, setGalleryFilter] = useState<string>('todos');
   const [activeGalleryItem, setActiveGalleryItem] = useState<GalleryItem | null>(null);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
@@ -333,8 +335,37 @@ ${extraStr}`;
               <User className="w-3.5 h-3.5" />
               ACCESO CLIENTES
             </button>
+            <button
+              onClick={() => setMobileMenuOpen(prev => !prev)}
+              className="lg:hidden p-2.5 rounded-full border border-gray-800 text-gray-300 hover:text-amber-500 hover:border-amber-500/40 transition-all cursor-pointer"
+              aria-label="Abrir menú de navegación"
+              id="btn-mobile-menu-toggle"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile dropdown menu (breakpoints below lg) */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25 }}
+              className="lg:hidden overflow-hidden"
+            >
+              <nav className="flex flex-col text-xs font-semibold tracking-widest text-gray-400 font-mono pt-4">
+                <a href="#about" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-gray-900 hover:text-amber-500 transition-colors uppercase">QUIÉNES SOMOS</a>
+                <a href="#experiencias" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-gray-900 hover:text-amber-500 transition-colors uppercase">EXPERIENCIAS</a>
+                <a href="#galeria-producciones" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-gray-900 hover:text-amber-500 transition-colors uppercase">GALERÍA</a>
+                <a href="#servicios-detallados" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-gray-900 hover:text-amber-500 transition-colors uppercase">SERVICIOS</a>
+                <a href="#cotizador-rapido" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-b border-gray-900 hover:text-amber-500 transition-colors uppercase">COTIZADOR</a>
+              </nav>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       {/* Hero section with dynamic customizable background image */}
