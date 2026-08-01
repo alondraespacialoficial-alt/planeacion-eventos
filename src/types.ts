@@ -113,12 +113,14 @@ export interface Lead {
 
 export interface GalleryItem {
   id: string;
-  category: 'bodas' | 'graduaciones' | 'galas_xv' | 'corporativos';
+  created_at?: string;
+  category: 'bodas' | 'graduaciones' | 'galas_xv' | 'corporativos' | 'infantiles';
+  categoryLabel: string;
   title: string;
   location: string;
-  cover_url: string;
-  cover_type: 'image' | 'video';
   description: string;
+  media: Array<{ url: string; type: 'image' | 'video' }>;
+  is_visible: boolean;
 }
 
 export interface QuoteItem {

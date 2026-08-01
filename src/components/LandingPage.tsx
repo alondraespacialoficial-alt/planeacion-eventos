@@ -38,113 +38,8 @@ import {
   Minus
 } from 'lucide-react';
 import { AppService } from '../lib/supabase';
-import { LandingConfig, Service, Event } from '../types';
+import { LandingConfig, Service, Event, GalleryItem } from '../types';
 import { generateQuotePdf } from '../lib/pdfGenerator';
-
-const GALLERY_ITEMS: Array<{
-  id: string;
-  category: 'bodas' | 'graduaciones' | 'galas_xv' | 'corporativos';
-  categoryLabel: string;
-  title: string;
-  location: string;
-  cover_url: string;
-  cover_type: 'image' | 'video';
-  description: string;
-  media: Array<{ url: string; type: 'image' | 'video' }>;
-}> = [
-  {
-    id: 'gal-1',
-    category: 'bodas',
-    categoryLabel: 'Boda de Ensueño',
-    title: 'Boda Alejandra & Sebastián',
-    location: 'Hacienda de los Morales, CDMX',
-    cover_url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1200',
-    cover_type: 'image',
-    description: 'Montaje de luces arquitectónicas, video 4K cinematográfico e iluminación DMX personalizada para 250 invitados.',
-    media: [
-      { url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=90&w=1600', type: 'image' },
-      { url: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=90&w=1600', type: 'image' },
-      { url: 'https://images.unsplash.com/photo-1530023367847-a683933f4172?auto=format&fit=crop&q=90&w=1600', type: 'image' },
-      { url: 'https://images.unsplash.com/photo-1571501679680-de32f1e7aad4?auto=format&fit=crop&q=90&w=1600', type: 'image' }
-    ]
-  },
-  {
-    id: 'gal-2',
-    category: 'graduaciones',
-    categoryLabel: 'Gala de Graduación',
-    title: 'Gala Medicina 2026',
-    location: 'Castillo de Chapultepec, CDMX',
-    cover_url: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=1200',
-    cover_type: 'image',
-    description: 'Producción escénica monumental con pantalla LED gigante, pirotecnia fría y cobertura con drones en directo.',
-    media: [
-      { url: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=90&w=1600', type: 'image' },
-      { url: 'https://images.unsplash.com/photo-1546032996-6dfacbacbf3f?auto=format&fit=crop&q=90&w=1600', type: 'image' },
-      { url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=90&w=1600', type: 'image' }
-    ]
-  },
-  {
-    id: 'gal-3',
-    category: 'galas_xv',
-    categoryLabel: 'XV Años Temáticos',
-    title: 'Mis XV Años - Isabella',
-    location: 'Jardín Las Flores, Cuernavaca',
-    cover_url: 'https://assets.mixkit.co/videos/preview/mixkit-celebration-sparklers-in-a-party-night-40244-large.mp4',
-    cover_type: 'video',
-    description: 'Espectáculo de luces robóticas, pista iluminada de cristal y show audiovisual para quinceañera.',
-    media: [
-      { url: 'https://assets.mixkit.co/videos/preview/mixkit-celebration-sparklers-in-a-party-night-40244-large.mp4', type: 'video' },
-      { url: 'https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&q=90&w=1600', type: 'image' },
-      { url: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&q=90&w=1600', type: 'image' }
-    ]
-  },
-  {
-    id: 'gal-4',
-    category: 'bodas',
-    categoryLabel: 'Boda de Autor',
-    title: 'Boda Romántica al Atardecer',
-    location: 'Jardín Borda, Cuernavaca',
-    cover_url: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=1200',
-    cover_type: 'image',
-    description: 'Decoración floral de autor, banquetes gourmet a 4 tiempos y coordinación integral sin contratiempos.',
-    media: [
-      { url: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=90&w=1600', type: 'image' },
-      { url: 'https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?auto=format&fit=crop&q=90&w=1600', type: 'image' },
-      { url: 'https://images.unsplash.com/photo-1494783367193-149034c05e8f?auto=format&fit=crop&q=90&w=1600', type: 'image' }
-    ]
-  },
-  {
-    id: 'gal-5',
-    category: 'corporativos',
-    categoryLabel: 'Evento Corporativo',
-    title: 'Cumbre de Innovación Anual',
-    location: 'Hotel St. Regis, CDMX',
-    cover_url: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&q=80&w=1200',
-    cover_type: 'image',
-    description: 'Sonorización HD multipunto, transmisión en vivo simultánea e invitaciones digitales con control de asistencia QR.',
-    media: [
-      { url: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&q=90&w=1600', type: 'image' },
-      { url: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&q=90&w=1600', type: 'image' },
-      { url: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&q=90&w=1600', type: 'image' }
-    ]
-  },
-  {
-    id: 'gal-6',
-    category: 'galas_xv',
-    categoryLabel: 'Gala & Fiesta',
-    title: 'Noche de Gala y Celebración',
-    location: 'Salón Real, Polanco',
-    cover_url: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&q=80&w=1200',
-    cover_type: 'image',
-    description: 'Catering gourmet, cabina de fotos interactiva 360 y diseño ambiental con iluminación neón cálida.',
-    media: [
-      { url: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&q=90&w=1600', type: 'image' },
-      { url: 'https://images.unsplash.com/photo-1470019693664-1d202d2c0907?auto=format&fit=crop&q=90&w=1600', type: 'image' },
-      { url: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=90&w=1600', type: 'image' },
-      { url: 'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?auto=format&fit=crop&q=90&w=1600', type: 'image' }
-    ]
-  }
-];
 
 interface LandingPageProps {
   onNavigate: (route: string) => void;
@@ -163,6 +58,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
 
   const [services, setServices] = useState<Service[]>([]);
   const [showcaseEvents, setShowcaseEvents] = useState<Event[]>([]);
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Form State for Public Quote Form
@@ -180,7 +76,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [guestsCount, setGuestsCount] = useState<number>(100);
   const [galleryFilter, setGalleryFilter] = useState<string>('todos');
-  const [activeGalleryItem, setActiveGalleryItem] = useState<typeof GALLERY_ITEMS[number] | null>(null);
+  const [activeGalleryItem, setActiveGalleryItem] = useState<GalleryItem | null>(null);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [activeServiceDetail, setActiveServiceDetail] = useState<{ title: string; description: string; image_url?: string; price: string; categoryLabel?: string } | null>(null);
   const [lastSubmittedFolio, setLastSubmittedFolio] = useState<string>('COT-2026-001');
@@ -205,6 +101,8 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         setServices(loadedServices.filter(s => s.is_visible));
         const loadedShowcase = await AppService.getPublicShowcaseEvents();
         setShowcaseEvents(loadedShowcase);
+        const loadedGalleryItems = await AppService.getGalleryItems();
+        setGalleryItems(loadedGalleryItems.filter(g => g.is_visible));
       } catch (err) {
         console.error('Error loading landing page data', err);
       } finally {
@@ -762,7 +660,8 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                 { id: 'bodas', label: 'Bodas' },
                 { id: 'graduaciones', label: 'Graduaciones' },
                 { id: 'galas_xv', label: 'XV Años & Galas' },
-                { id: 'corporativos', label: 'Corporativos' }
+                { id: 'corporativos', label: 'Corporativos' },
+                { id: 'infantiles', label: 'Infantiles' }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -781,7 +680,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
 
           {/* Gallery Items Grid */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {GALLERY_ITEMS.filter(item => galleryFilter === 'todos' || item.category === galleryFilter).map(item => (
+            {galleryItems.filter(item => galleryFilter === 'todos' || item.category === galleryFilter).map(item => (
               <motion.div
                 key={item.id}
                 layout
@@ -795,9 +694,9 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                   className="relative h-56 overflow-hidden cursor-pointer bg-black/60"
                   onClick={() => { setActiveGalleryItem(item); setActiveMediaIndex(0); }}
                 >
-                  {item.cover_type === 'video' ? (
+                  {item.media[0]?.type === 'video' ? (
                     <video 
-                      src={item.cover_url} 
+                      src={item.media[0].url} 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80" 
                       muted 
                       loop 
@@ -806,7 +705,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                     />
                   ) : (
                     <img 
-                      src={item.cover_url} 
+                      src={item.media[0]?.url} 
                       alt={item.title} 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-85" 
                       referrerPolicy="no-referrer"

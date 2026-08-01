@@ -48,7 +48,7 @@ import {
   ShieldCheck,
   UserCog
 } from 'lucide-react';
-import { Event, UserSession, Service, Lead, Quote, QuoteItem, LandingConfig, PaymentReceipt, UserProfile } from '../types';
+import { Event, UserSession, Service, Lead, Quote, QuoteItem, LandingConfig, PaymentReceipt, UserProfile, GalleryItem } from '../types';
 import { AppService, isSupabaseConfigured, SUPABASE_SQL_BLUEPRINT } from '../lib/supabase';
 import { generateQuotePdf } from '../lib/pdfGenerator';
 
@@ -61,8 +61,8 @@ interface AdminDashboardProps {
 export default function AdminDashboard({ currentUser, onLogout, onNavigate }: AdminDashboardProps) {
   const isSuperAdmin = currentUser.role === 'super_admin';
 
-  // Tabs State: 'cards' (Events), 'quotes', 'payments', 'leads', 'services', 'config', 'access'
-  const [activeTab, setActiveTab] = useState<'cards' | 'quotes' | 'payments' | 'leads' | 'services' | 'config' | 'access'>(
+  // Tabs State: 'cards' (Events), 'quotes', 'payments', 'leads', 'services', 'gallery', 'config', 'access'
+  const [activeTab, setActiveTab] = useState<'cards' | 'quotes' | 'payments' | 'leads' | 'services' | 'gallery' | 'config' | 'access'>(
     isSuperAdmin ? 'cards' : 'leads'
   );
 
@@ -124,6 +124,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   const [uploadingMusic, setUploadingMusic] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingHeroBg, setUploadingHeroBg] = useState(false);
+  const [uploadingServiceImage, setUploadingServiceImage] = useState(false);
+  const [uploadingGalleryMedia, setUploadingGalleryMedia] = useState(false);
 
   const MAX_GALLERY_PHOTOS = 6;
 
@@ -161,6 +163,21 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   const [srvImageUrl, setSrvImageUrl] = useState('');
   const [srvIsVisible, setSrvIsVisible] = useState(true);
 
+  // 3.1 =========================================================
+  // MODAL / FORM STATE FOR GALLERY ITEMS (GALERÍA DE PRODUCCIONES)
+  // =========================================================
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
+  const [isGalleryFormOpen, setIsGalleryFormOpen] = useState(false);
+  const [editingGalleryId, setEditingGalleryId] = useState<string | null>(null);
+
+  const [gItemTitle, setGItemTitle] = useState('');
+  const [gItemLocation, setGItemLocation] = useState('');
+  const [gItemCategory, setGItemCategory] = useState<GalleryItem['category']>('bodas');
+  const [gItemCategoryLabel, setGItemCategoryLabel] = useState('');
+  const [gItemDescription, setGItemDescription] = useState('');
+  const [gItemMedia, setGItemMedia] = useState<Array<{ url: string; type: 'image' | 'video' }>>([]);
+  const [gItemIsVisible, setGItemIsVisible] = useState(true);
+
   // Elegant Toast notification state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [leadFilter, setLeadFilter] = useState<string>('all');
@@ -185,13 +202,14 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     async function loadAllAdminData() {
       setLoading(true);
       try {
-        const [loadedEvents, loadedQuotes, loadedLeads, loadedServices, loadedConfig, loadedPayments] = await Promise.all([
+        const [loadedEvents, loadedQuotes, loadedLeads, loadedServices, loadedConfig, loadedPayments, loadedGalleryItems] = await Promise.all([
           AppService.getEvents(null), // Admin gets all events
           AppService.getQuotes(null), // Admin gets all quotes
           AppService.getLeads(),
           AppService.getServices(),
           AppService.getLandingConfig(),
-          AppService.getPaymentReceipts() // Admin gets all client receipts
+          AppService.getPaymentReceipts(), // Admin gets all client receipts
+          AppService.getGalleryItems()
         ]);
 
         setEvents(loadedEvents);
@@ -199,6 +217,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
         setLeads(loadedLeads);
         setServices(loadedServices);
         setPayments(loadedPayments || []);
+        setGalleryItems(loadedGalleryItems || []);
         if (loadedConfig) {
           setLandingConfig(loadedConfig);
         }
@@ -436,7 +455,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   };
 
   const handleGalleryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+    const files: File[] = e.target.files ? Array.from(e.target.files) : [];
     if (files.length === 0) return;
 
     const availableSlots = MAX_GALLERY_PHOTOS - evtGalleryUrls.length;
@@ -516,6 +535,61 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     } finally {
       setUploadingHeroBg(false);
     }
+  };
+
+  const handleServiceImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingServiceImage(true);
+    try {
+      const url = await AppService.uploadMedia(file);
+      setSrvImageUrl(url);
+      showToast('Imagen del servicio subida con éxito.', 'success');
+    } catch (err) {
+      showToast('Error al subir la imagen del servicio.', 'error');
+    } finally {
+      setUploadingServiceImage(false);
+      e.target.value = '';
+    }
+  };
+
+  const MAX_GALLERY_ITEM_MEDIA = 8;
+
+  const handleGalleryMediaFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files: File[] = e.target.files ? Array.from(e.target.files) : [];
+    if (files.length === 0) return;
+
+    const availableSlots = MAX_GALLERY_ITEM_MEDIA - gItemMedia.length;
+    if (availableSlots <= 0) {
+      showToast(`Ya alcanzaste el máximo de ${MAX_GALLERY_ITEM_MEDIA} archivos para esta producción.`, 'error');
+      e.target.value = '';
+      return;
+    }
+
+    const filesToUpload = files.slice(0, availableSlots);
+    if (files.length > availableSlots) {
+      showToast(`Solo se subirán ${availableSlots} archivo(s), el máximo es ${MAX_GALLERY_ITEM_MEDIA}.`, 'info');
+    }
+
+    setUploadingGalleryMedia(true);
+    try {
+      const uploaded: Array<{ url: string; type: 'image' | 'video' }> = [];
+      for (const file of filesToUpload) {
+        const url = await AppService.uploadMedia(file);
+        uploaded.push({ url, type: file.type.startsWith('video/') ? 'video' : 'image' });
+      }
+      setGItemMedia(prev => [...prev, ...uploaded]);
+      showToast('Fotos/videos subidos con éxito.', 'success');
+    } catch (err) {
+      showToast('Error al subir uno o más archivos.', 'error');
+    } finally {
+      setUploadingGalleryMedia(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveGalleryMediaItem = (index: number) => {
+    setGItemMedia(prev => prev.filter((_, i) => i !== index));
   };
 
   // =========================================================
@@ -784,6 +858,93 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   };
 
   // =========================================================
+  // GALLERY / PORTFOLIO ITEMS CRUD HANDLERS (GALERÍA DE PRODUCCIONES)
+  // =========================================================
+  const GALLERY_CATEGORY_LABELS: Record<GalleryItem['category'], string> = {
+    bodas: 'Bodas',
+    graduaciones: 'Graduaciones',
+    galas_xv: 'XV Años & Galas',
+    corporativos: 'Corporativos',
+    infantiles: 'Infantiles'
+  };
+
+  const handleOpenCreateGalleryItem = () => {
+    setEditingGalleryId(null);
+    setGItemTitle('');
+    setGItemLocation('');
+    setGItemCategory('bodas');
+    setGItemCategoryLabel('');
+    setGItemDescription('');
+    setGItemMedia([]);
+    setGItemIsVisible(true);
+    setIsGalleryFormOpen(true);
+  };
+
+  const handleOpenEditGalleryItem = (item: GalleryItem) => {
+    setEditingGalleryId(item.id);
+    setGItemTitle(item.title);
+    setGItemLocation(item.location);
+    setGItemCategory(item.category);
+    setGItemCategoryLabel(item.categoryLabel);
+    setGItemDescription(item.description);
+    setGItemMedia(item.media);
+    setGItemIsVisible(item.is_visible);
+    setIsGalleryFormOpen(true);
+  };
+
+  const handleSubmitGalleryItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!gItemTitle || !gItemLocation) {
+      showToast('Complete los campos obligatorios de la producción.', 'error');
+      return;
+    }
+    if (gItemMedia.length === 0) {
+      showToast('Suba al menos una foto o video para la producción.', 'error');
+      return;
+    }
+
+    try {
+      const payload = {
+        title: gItemTitle,
+        location: gItemLocation,
+        category: gItemCategory,
+        categoryLabel: gItemCategoryLabel || GALLERY_CATEGORY_LABELS[gItemCategory],
+        description: gItemDescription,
+        media: gItemMedia,
+        is_visible: gItemIsVisible
+      };
+
+      const result = await AppService.saveGalleryItem(
+        editingGalleryId ? { ...payload, id: editingGalleryId } : payload
+      );
+
+      if (editingGalleryId) {
+        setGalleryItems(prev => prev.map(g => g.id === editingGalleryId ? result : g));
+        showToast('Producción actualizada correctamente en la galería.', 'success');
+      } else {
+        setGalleryItems(prev => [result, ...prev]);
+        showToast('Producción agregada correctamente a la galería.', 'success');
+      }
+      setIsGalleryFormOpen(false);
+    } catch (err) {
+      showToast('Error al guardar la producción.', 'error');
+    }
+  };
+
+  const handleDeleteGalleryItem = async (id: string) => {
+    if (!window.confirm('¿Está seguro de eliminar esta producción de la galería pública?')) return;
+    try {
+      const ok = await AppService.deleteGalleryItem(id);
+      if (ok) {
+        setGalleryItems(prev => prev.filter(g => g.id !== id));
+        showToast('Producción eliminada correctamente de la galería.', 'success');
+      }
+    } catch (err) {
+      showToast('Error al eliminar.', 'error');
+    }
+  };
+
+  // =========================================================
   // LANDING DESIGN CUSTOMIZATION HANDLER
   // =========================================================
   const handleSaveLandingConfig = async (e: React.FormEvent) => {
@@ -900,6 +1061,15 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
             >
               <CheckSquare className="w-3.5 h-3.5" />
               Catálogo Servicios ({services.length})
+            </button>
+          )}
+          {isSuperAdmin && (
+            <button 
+              onClick={() => setActiveTab('gallery')}
+              className={`pb-1 border-b-2 transition-all flex items-center gap-1.5 ${activeTab === 'gallery' ? 'border-amber-500 text-amber-500' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              Galería de Producciones ({galleryItems.length})
             </button>
           )}
           {isSuperAdmin && (
@@ -1711,6 +1881,65 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
           </div>
         )}
 
+        {/* TAB 4.1: GALLERY / PORTFOLIO ITEMS (GALERÍA DE PRODUCCIONES) */}
+        {activeTab === 'gallery' && isSuperAdmin && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center gap-4 flex-wrap">
+              <div>
+                <h3 className="font-serif text-2xl text-white">Galería de Producciones Legendarias</h3>
+                <p className="text-xs text-gray-500">Administre las producciones (bodas, graduaciones, XV años, corporativos) que se muestran en el portafolio público de la landing. Cada producción admite varias fotos o videos.</p>
+              </div>
+              <button 
+                onClick={handleOpenCreateGalleryItem}
+                className="px-5 py-3 rounded-full bg-amber-500 hover:bg-amber-400 text-black font-mono text-xs font-bold tracking-widest flex items-center gap-1.5"
+              >
+                <Plus className="w-4 h-4" />
+                NUEVA PRODUCCIÓN
+              </button>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {galleryItems.map(item => (
+                <div key={item.id} className="rounded-xl border border-gray-800 bg-[#0d0e12] overflow-hidden flex flex-col justify-between">
+                  <div className="h-36 overflow-hidden relative bg-black/60">
+                    {item.media[0]?.type === 'video' ? (
+                      <video src={item.media[0].url} className="w-full h-full object-cover opacity-80" muted />
+                    ) : (
+                      <img src={item.media[0]?.url} alt={item.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    )}
+                    <span className={`absolute top-2 right-2 h-2.5 w-2.5 rounded-full ${item.is_visible ? 'bg-emerald-500' : 'bg-red-500'}`} title={item.is_visible ? 'Visible en Landing' : 'Oculto'} />
+                    {item.media.length > 1 && (
+                      <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/80 border border-gray-700 text-[9px] font-mono text-gray-300">
+                        +{item.media.length} fotos
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-5 space-y-3 flex-1">
+                    <span className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-[9px] font-mono text-amber-500 uppercase">
+                      {item.categoryLabel}
+                    </span>
+                    <h4 className="font-serif text-lg text-white font-medium">{item.title}</h4>
+                    <p className="text-[11px] text-gray-500 font-mono flex items-center gap-1">
+                      <MapPin className="w-3 h-3 shrink-0" />
+                      {item.location}
+                    </p>
+                    <p className="text-gray-400 text-xs font-light leading-relaxed line-clamp-2">{item.description}</p>
+                  </div>
+
+                  <div className="flex justify-end gap-2 p-4 pt-3 border-t border-gray-900">
+                    <button onClick={() => handleOpenEditGalleryItem(item)} className="p-1.5 hover:bg-amber-500/10 text-gray-400 hover:text-amber-400 rounded">
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => handleDeleteGalleryItem(item.id)} className="p-1.5 hover:bg-red-500/10 text-gray-400 hover:text-red-400 rounded">
+                      <Trash className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* TAB 5: WEBSITE SETTINGS */}
         {activeTab === 'config' && isSuperAdmin && (
           <div className="space-y-6 max-w-3xl">
@@ -2302,6 +2531,94 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
               <div className="flex justify-end gap-2 pt-4">
                 <button type="button" onClick={() => setIsServiceFormOpen(false)} className="px-4 py-2 border border-gray-800 rounded hover:bg-gray-800 text-gray-400">Cancelar</button>
                 <button type="submit" className="px-5 py-2 bg-amber-500 text-black font-mono font-bold rounded">Guardar Servicio</button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* =========================================================
+          GALLERY ITEM (PRODUCCIÓN DE PORTAFOLIO) MODAL OVERLAY
+          ========================================================= */}
+      {isGalleryFormOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-xl rounded-2xl border border-gray-800 bg-[#0e1014] p-8 max-h-[90vh] overflow-y-auto space-y-6">
+            <div className="flex justify-between items-center border-b border-gray-800 pb-4">
+              <h4 className="font-serif text-xl text-amber-500 font-medium">{editingGalleryId ? 'Modificar Producción' : 'Nueva Producción de Portafolio'}</h4>
+              <button onClick={() => setIsGalleryFormOpen(false)} className="text-gray-500 hover:text-white">✕</button>
+            </div>
+
+            <form onSubmit={handleSubmitGalleryItem} className="space-y-5 text-xs">
+              <div>
+                <label className="block font-mono text-gray-400 mb-1">TÍTULO DE LA PRODUCCIÓN *</label>
+                <input type="text" required value={gItemTitle} onChange={(e) => setGItemTitle(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" placeholder="Ej. Boda Alejandra & Sebastián" />
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-mono text-gray-400 mb-1">CATEGORÍA</label>
+                  <select value={gItemCategory} onChange={(e: any) => setGItemCategory(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white">
+                    <option value="bodas">Bodas</option>
+                    <option value="graduaciones">Graduaciones</option>
+                    <option value="galas_xv">XV Años & Galas</option>
+                    <option value="corporativos">Corporativos</option>
+                    <option value="infantiles">Infantiles</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-mono text-gray-400 mb-1">ETIQUETA DE PRODUCCIÓN (OPCIONAL)</label>
+                  <input type="text" value={gItemCategoryLabel} onChange={(e) => setGItemCategoryLabel(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" placeholder={GALLERY_CATEGORY_LABELS[gItemCategory]} />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-mono text-gray-400 mb-1">UBICACIÓN *</label>
+                <input type="text" required value={gItemLocation} onChange={(e) => setGItemLocation(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" placeholder="Ej. Hacienda de los Morales, CDMX" />
+              </div>
+
+              <div>
+                <label className="block font-mono text-gray-400 mb-1">DESCRIPCIÓN</label>
+                <textarea rows={3} value={gItemDescription} onChange={(e) => setGItemDescription(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white resize-none" placeholder="Breve reseña de la producción" />
+              </div>
+
+              <div>
+                <label className="block font-mono text-gray-400 mb-1">FOTOS / VIDEOS ({gItemMedia.length}/{MAX_GALLERY_ITEM_MEDIA}) *</label>
+                {gItemMedia.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-2">
+                    {gItemMedia.map((m, index) => (
+                      <div key={index} className="relative aspect-square rounded overflow-hidden border border-gray-800 group bg-black/60">
+                        {m.type === 'video' ? (
+                          <video src={m.url} className="w-full h-full object-cover" muted />
+                        ) : (
+                          <img src={m.url} alt={`Media ${index + 1}`} className="w-full h-full object-cover" />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveGalleryMediaItem(index)}
+                          className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/70 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {gItemMedia.length < MAX_GALLERY_ITEM_MEDIA && (
+                  <div className="border border-dashed border-gray-800 rounded-lg p-4 bg-black/20 text-center relative cursor-pointer">
+                    <input type="file" multiple onChange={handleGalleryMediaFileChange} accept="image/*,video/*" className="absolute inset-0 opacity-0 cursor-pointer" />
+                    {uploadingGalleryMedia ? <p className="text-amber-500">Subiendo archivos...</p> : <p className="text-gray-500">Arrastre o seleccione fotos/videos para almacenar en Supabase Storage</p>}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="gitem-visible" checked={gItemIsVisible} onChange={(e) => setGItemIsVisible(e.target.checked)} className="accent-amber-500" />
+                <label htmlFor="gitem-visible" className="text-gray-300 select-none">Mostrar públicamente en la galería de portafolio de la landing</label>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <button type="button" onClick={() => setIsGalleryFormOpen(false)} className="px-4 py-2 border border-gray-800 rounded hover:bg-gray-800 text-gray-400">Cancelar</button>
+                <button type="submit" className="px-5 py-2 bg-amber-500 text-black font-mono font-bold rounded">Guardar Producción</button>
               </div>
             </form>
           </motion.div>

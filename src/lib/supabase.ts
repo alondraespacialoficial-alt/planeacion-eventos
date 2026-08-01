@@ -4,7 +4,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { Event, RSVP, UserSession, Service, Lead, Quote, LandingConfig, PaymentReceipt, VendorItem, UserProfile } from '../types';
+import { Event, RSVP, UserSession, Service, Lead, Quote, LandingConfig, PaymentReceipt, VendorItem, UserProfile, GalleryItem } from '../types';
 
 // Read configuration from env
 const rawSupabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
@@ -392,6 +392,95 @@ const DEFAULT_VENDORS: VendorItem[] = [
   }
 ];
 
+const DEFAULT_GALLERY_ITEMS: GalleryItem[] = [
+  {
+    id: 'gal-1',
+    category: 'bodas',
+    categoryLabel: 'Boda de Ensueño',
+    title: 'Boda Alejandra & Sebastián',
+    location: 'Hacienda de los Morales, CDMX',
+    description: 'Montaje de luces arquitectónicas, video 4K cinematográfico e iluminación DMX personalizada para 250 invitados.',
+    is_visible: true,
+    media: [
+      { url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1530023367847-a683933f4172?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1571501679680-de32f1e7aad4?auto=format&fit=crop&q=90&w=1600', type: 'image' }
+    ]
+  },
+  {
+    id: 'gal-2',
+    category: 'graduaciones',
+    categoryLabel: 'Gala de Graduación',
+    title: 'Gala Medicina 2026',
+    location: 'Castillo de Chapultepec, CDMX',
+    description: 'Producción escénica monumental con pantalla LED gigante, pirotecnia fría y cobertura con drones en directo.',
+    is_visible: true,
+    media: [
+      { url: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1546032996-6dfacbacbf3f?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=90&w=1600', type: 'image' }
+    ]
+  },
+  {
+    id: 'gal-3',
+    category: 'galas_xv',
+    categoryLabel: 'XV Años Temáticos',
+    title: 'Mis XV Años - Isabella',
+    location: 'Jardín Las Flores, Cuernavaca',
+    description: 'Espectáculo de luces robóticas, pista iluminada de cristal y show audiovisual para quinceañera.',
+    is_visible: true,
+    media: [
+      { url: 'https://assets.mixkit.co/videos/preview/mixkit-celebration-sparklers-in-a-party-night-40244-large.mp4', type: 'video' },
+      { url: 'https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&q=90&w=1600', type: 'image' }
+    ]
+  },
+  {
+    id: 'gal-4',
+    category: 'bodas',
+    categoryLabel: 'Boda de Autor',
+    title: 'Boda Romántica al Atardecer',
+    location: 'Jardín Borda, Cuernavaca',
+    description: 'Decoración floral de autor, banquetes gourmet a 4 tiempos y coordinación integral sin contratiempos.',
+    is_visible: true,
+    media: [
+      { url: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1494783367193-149034c05e8f?auto=format&fit=crop&q=90&w=1600', type: 'image' }
+    ]
+  },
+  {
+    id: 'gal-5',
+    category: 'corporativos',
+    categoryLabel: 'Evento Corporativo',
+    title: 'Cumbre de Innovación Anual',
+    location: 'Hotel St. Regis, CDMX',
+    description: 'Sonorización HD multipunto, transmisión en vivo simultánea e invitaciones digitales con control de asistencia QR.',
+    is_visible: true,
+    media: [
+      { url: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&q=90&w=1600', type: 'image' }
+    ]
+  },
+  {
+    id: 'gal-6',
+    category: 'galas_xv',
+    categoryLabel: 'Gala & Fiesta',
+    title: 'Noche de Gala y Celebración',
+    location: 'Salón Real, Polanco',
+    description: 'Catering gourmet, cabina de fotos interactiva 360 y diseño ambiental con iluminación neón cálida.',
+    is_visible: true,
+    media: [
+      { url: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1470019693664-1d202d2c0907?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=90&w=1600', type: 'image' },
+      { url: 'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?auto=format&fit=crop&q=90&w=1600', type: 'image' }
+    ]
+  }
+];
+
 // LocalStorage database engine for seamless demo
 class LocalStorageDB {
   static getEvents(): Event[] {
@@ -483,6 +572,19 @@ class LocalStorageDB {
 
   static saveVendors(vendors: VendorItem[]): void {
     localStorage.setItem('vendors_data', JSON.stringify(vendors));
+  }
+
+  static getGalleryItems(): GalleryItem[] {
+    const data = localStorage.getItem('gallery_items_data');
+    if (!data) {
+      localStorage.setItem('gallery_items_data', JSON.stringify(DEFAULT_GALLERY_ITEMS));
+      return DEFAULT_GALLERY_ITEMS;
+    }
+    return JSON.parse(data);
+  }
+
+  static saveGalleryItems(items: GalleryItem[]): void {
+    localStorage.setItem('gallery_items_data', JSON.stringify(items));
   }
 
   static getLandingConfig(): LandingConfig {
@@ -1264,6 +1366,88 @@ export const AppService = {
     return true;
   },
 
+  // --- GALLERY / PORTFOLIO ITEMS (SHOWCASE DE PRODUCCIONES, ADMIN-EDITABLE) ---
+  async getGalleryItems(): Promise<GalleryItem[]> {
+    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
+      try {
+        const { data, error } = await supabase
+          .from('gallery_items')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (!error && data) {
+          return (data as any[]).map(row => ({
+            id: row.id,
+            created_at: row.created_at,
+            category: row.category,
+            categoryLabel: row.category_label,
+            title: row.title,
+            location: row.location,
+            description: row.description,
+            media: row.media || [],
+            is_visible: row.is_visible
+          })) as GalleryItem[];
+        }
+      } catch (err) {
+        console.error('Error fetching gallery items from Supabase, trying fallback...', err);
+      }
+    }
+    return LocalStorageDB.getGalleryItems();
+  },
+
+  async saveGalleryItem(item: Omit<GalleryItem, 'id'> & { id?: string }): Promise<GalleryItem> {
+    const isNew = !item.id;
+    const finalItem: GalleryItem = {
+      ...item,
+      id: item.id || 'gal-' + Math.random().toString(36).substr(2, 9)
+    } as GalleryItem;
+
+    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
+      try {
+        const row = {
+          id: finalItem.id,
+          category: finalItem.category,
+          category_label: finalItem.categoryLabel,
+          title: finalItem.title,
+          location: finalItem.location,
+          description: finalItem.description,
+          media: finalItem.media,
+          is_visible: finalItem.is_visible
+        };
+        const query = isNew
+          ? supabase.from('gallery_items').insert([row])
+          : supabase.from('gallery_items').update(row).eq('id', finalItem.id);
+        const { error } = await query;
+        if (!error) return finalItem;
+      } catch (err) {
+        console.error('Error saving gallery item to Supabase, trying fallback...', err);
+      }
+    }
+
+    const all = LocalStorageDB.getGalleryItems();
+    if (isNew) {
+      all.unshift(finalItem);
+    } else {
+      const idx = all.findIndex(g => g.id === finalItem.id);
+      if (idx !== -1) all[idx] = finalItem;
+    }
+    LocalStorageDB.saveGalleryItems(all);
+    return finalItem;
+  },
+
+  async deleteGalleryItem(id: string): Promise<boolean> {
+    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
+      try {
+        const { error } = await supabase.from('gallery_items').delete().eq('id', id);
+        if (!error) return true;
+      } catch (err) {
+        console.error('Error deleting gallery item from Supabase, trying fallback...', err);
+      }
+    }
+    const all = LocalStorageDB.getGalleryItems();
+    LocalStorageDB.saveGalleryItems(all.filter(g => g.id !== id));
+    return true;
+  },
+
   // --- LEADS / PEDIDOS ---
   async getLeads(): Promise<Lead[]> {
     if (isSupabaseConfigured && supabase && supabaseTablesExist) {
@@ -1605,6 +1789,26 @@ CREATE TABLE IF NOT EXISTS public.vendors (
     notes TEXT
 );
 
+-- 1.11. Create GALLERY_ITEMS Table
+-- Portafolio público de producciones ("Galería de Producciones Legendarias" en la landing).
+-- Cada fila puede tener varias fotos/videos en la columna media (JSONB).
+CREATE TABLE IF NOT EXISTS public.gallery_items (
+    id TEXT PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    category TEXT CHECK (category IN ('bodas', 'graduaciones', 'galas_xv', 'corporativos', 'infantiles')) NOT NULL,
+    category_label TEXT NOT NULL,
+    title TEXT NOT NULL,
+    location TEXT NOT NULL,
+    description TEXT,
+    media JSONB DEFAULT '[]'::JSONB NOT NULL,
+    is_visible BOOLEAN DEFAULT true NOT NULL
+);
+
+-- Migración: si la tabla ya existía con el CHECK anterior (sin 'infantiles'), se reemplaza aquí.
+ALTER TABLE public.gallery_items DROP CONSTRAINT IF EXISTS gallery_items_category_check;
+ALTER TABLE public.gallery_items ADD CONSTRAINT gallery_items_category_check
+    CHECK (category IN ('bodas', 'graduaciones', 'galas_xv', 'corporativos', 'infantiles'));
+
 -- ==========================================
 -- 2. Seed Initial Landing Configuration
 -- ==========================================
@@ -1684,6 +1888,7 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_allowlist ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_receipts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vendors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.gallery_items ENABLE ROW LEVEL SECURITY;
 
 -- ==========================================
 -- 4. Create Security Policies (RLS Rules)
@@ -1825,6 +2030,17 @@ CREATE POLICY "Clients manage own vendors" ON public.vendors
     )
     WITH CHECK (
         auth.jwt() ->> 'email' = client_email OR public.is_admin()
+    );
+
+-- 4.11. Policies for GALLERY_ITEMS
+DROP POLICY IF EXISTS "Public read visible gallery items" ON public.gallery_items;
+CREATE POLICY "Public read visible gallery items" ON public.gallery_items
+    FOR SELECT USING (is_visible = true);
+
+DROP POLICY IF EXISTS "Admins full access to gallery items" ON public.gallery_items;
+CREATE POLICY "Admins full access to gallery items" ON public.gallery_items
+    FOR ALL USING (
+        public.is_admin()
     );
 
 
