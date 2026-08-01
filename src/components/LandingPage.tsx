@@ -170,7 +170,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
 
       // 2. Build structured WhatsApp message
       const extraStr = extraServices.length > 0 ? extraServices.join(', ') : 'Ninguno';
-      const formattedMessage = `¡Hola Celebra tu Evento! Me gustaría cotizar mi evento (Folio: ${folioNum}):
+      const formattedMessage = `¡Hola Celebra tu Evento! Quiero solicitar mi cotización real. Esta es mi precotización automática (Folio: ${folioNum}):
 • *Nombre:* ${quoteForm.name}
 • *Teléfono:* ${quoteForm.phone}
 • *Ciudad:* ${quoteForm.city}
@@ -238,7 +238,7 @@ ${extraStr}`;
       discountTotal: 0,
       total: subtotal,
       observations: `Estimación automática (alimentos + personal) para ${guestsCount} asistentes. ${extraNote} Los valores son aproximados y funcionan como guía inicial; la propuesta final puede variar según ubicación, tipo de servicio, número de asistentes y requerimientos del evento.`,
-      terms: 'Cotización válida por 15 días hábiles. Para reservar la fecha se requiere el 50% de anticipo.',
+      terms: 'Precotización automática (alimentos + personal) válida como referencia por 15 días hábiles. La cotización real y definitiva, incluyendo los servicios adicionales de interés, se confirma directamente contigo. Para reservar la fecha se requiere el 50% de anticipo.',
       whatsappPhone: config.whatsapp_phone,
       businessAddress: config.business_address
     });
@@ -892,10 +892,10 @@ ${extraStr}`;
       <section id="cotizador-rapido" className="py-24 border-t border-gray-900 bg-[#07080a] px-6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <p className="text-amber-500 font-mono text-xs tracking-[0.4em] uppercase font-bold mb-3">COTIZADOR INMEDIATO</p>
+            <p className="text-amber-500 font-mono text-xs tracking-[0.4em] uppercase font-bold mb-3">PRECOTIZADOR INMEDIATO</p>
             <h3 className="font-serif text-3xl md:text-4xl text-white font-light tracking-tight">Arma el presupuesto preliminar de tu evento</h3>
             <p className="text-gray-400 text-xs font-light mt-4 leading-relaxed">
-              Selecciona los servicios que te interesan y obtén una estimación inicial según el número de invitados. Algunos servicios se cotizan de forma personalizada de acuerdo con el alcance, la duración y el tipo de celebración.
+              Selecciona los servicios que te interesan y obtén una precotización automática de alimentos y personal según el número de invitados. Los demás servicios se cotizan de forma personalizada y no se suman a este cálculo automático.
             </p>
           </div>
 
@@ -914,9 +914,9 @@ ${extraStr}`;
                   <span className="px-3 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-500 font-mono text-xs uppercase tracking-widest font-bold">
                     FOLIO REGISTRADO: {lastSubmittedFolio}
                   </span>
-                  <h4 className="font-serif text-2xl text-white font-medium mt-3">¡Solicitud de Cotización Registrada con Éxito!</h4>
+                  <h4 className="font-serif text-2xl text-white font-medium mt-3">¡Solicitud de Precotización Registrada con Éxito!</h4>
                   <p className="text-gray-400 text-xs max-w-md mx-auto mt-2 leading-relaxed">
-                    Hemos guardado tus requerimientos en nuestro sistema Celebra tu Evento. Ya puedes descargar tu documento PDF formal o iniciar el contacto directo en WhatsApp.
+                    Hemos guardado tus requerimientos en nuestro sistema Celebra tu Evento. Ya puedes descargar tu PDF de precotización o iniciar el contacto directo en WhatsApp para tu cotización real.
                   </p>
                 </div>
 
@@ -937,7 +937,7 @@ ${extraStr}`;
                     id="btn-another-quote"
                   >
                     <RefreshCw className="w-4 h-4 text-amber-500" />
-                    OTRA COTIZACIÓN
+                    OTRA PRECOTIZACIÓN
                   </button>
 
                   <button
@@ -994,6 +994,7 @@ ${extraStr}`;
                       </span>
                       <h4 className="font-serif text-lg text-white font-medium mt-1">Estimador inicial de alimentos y personal</h4>
                       <p className="text-gray-500 text-[11px] font-light mt-1">Calcula una referencia aproximada de alimentos y apoyo operativo según el número de asistentes.</p>
+                      <p className="text-amber-500/90 text-[10px] font-mono uppercase tracking-wide mt-1.5 font-semibold">Esta es tu precotización automática · no incluye los servicios adicionales marcados arriba</p>
                     </div>
                     
                     <div className="flex items-center gap-3 bg-[#0a0b0d] border border-gray-800 p-2 rounded-xl">
@@ -1211,7 +1212,7 @@ ${extraStr}`;
                       className="mt-1 accent-amber-500 h-4 w-4 bg-[#0a0b0d] border border-gray-800"
                     />
                     <label htmlFor="privacy-consent-box" className="text-[11px] text-gray-400 leading-relaxed font-light select-none">
-                      Doy consentimiento para que Celebra tu Evento almacene mis datos de contacto de manera segura de acuerdo con su <strong>Aviso de Privacidad</strong>, con la única finalidad de brindarme una cotización personalizada y agendar llamadas vía WhatsApp o telefónica.
+                      Doy consentimiento para que Celebra tu Evento almacene mis datos de contacto de manera segura de acuerdo con su <strong>Aviso de Privacidad</strong>, con la única finalidad de brindarme esta precotización y, posteriormente, mi cotización real personalizada vía WhatsApp o telefónica.
                     </label>
                   </div>
                 </div>
@@ -1223,7 +1224,7 @@ ${extraStr}`;
                     id="submit-public-quote"
                   >
                     <MessageCircle className="w-5 h-5 fill-black" />
-                    GENERAR MI COTIZACIÓN & ENVIAR A WHATSAPP
+                    SOLICITAR MI COTIZACIÓN REAL POR WHATSAPP
                   </button>
 
                   <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -1234,7 +1235,7 @@ ${extraStr}`;
                       id="btn-form-reset-quote"
                     >
                       <RefreshCw className="w-3.5 h-3.5 text-amber-500" />
-                      Limpiar / Hacer Otra Cotización
+                      Limpiar / Hacer Otra Precotización
                     </button>
 
                     <button
