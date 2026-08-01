@@ -547,7 +547,10 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {services.map((srv, idx) => {
-              const categoryLabel = srv.category === 'visual' ? 'Producción Visual' : srv.category === 'planning' ? 'Planeación' : 'Invitación';
+              const categoryLabel = srv.category === 'visual' ? 'Producción Visual'
+                : srv.category === 'planning' ? 'Planeación de Eventos'
+                : srv.category === 'invitations' ? 'Tarjetas / Invitaciones'
+                : 'Otros Servicios';
               return (
               <div 
                 key={idx} 
