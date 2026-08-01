@@ -236,19 +236,19 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
     {
       id: 'visual',
       title: 'Producción Visual',
-      description: 'Video cinematográfico 4K, fotografía artística, cobertura aérea con drones, video mapping y pantallas LED escénicas.',
+      description: 'Fotografía, dron, video y contenido visual para conservar y presentar tu evento con una imagen cuidada, emotiva y profesional. Ideal para celebraciones sociales, contenido de recuerdo y presencia digital del evento.',
       icon: <Video className="w-6 h-6 text-amber-500" />
     },
     {
       id: 'planning',
-      title: 'Planeación de Eventos',
-      description: 'Organización integral y logística de autor, catering exclusivo, meseros profesionales, sonido envolvente y diseño de iluminación.',
+      title: 'Planeación y Coordinación',
+      description: 'Apoyamos en la organización de momentos clave de tu evento, integrando servicios seleccionados y atención personalizada según el tipo de celebración y sus necesidades.',
       icon: <Sparkles className="w-6 h-6 text-amber-500" />
     },
     {
       id: 'invitations',
-      title: 'Invitaciones Digitales / Tarjetas',
-      description: 'Nuestra firma tecnológica: micrositios elegantes interactivos con música, mapas GPS y confirmación de asistencia en tiempo real.',
+      title: 'Invitaciones Digitales y Tarjetas',
+      description: 'Nuestra propuesta digital para eventos: invitaciones interactivas con diseño elegante, confirmación RSVP, ubicación, galería y herramientas pensadas para una experiencia moderna y funcional.',
       icon: <FileText className="w-6 h-6 text-amber-500" />
     }
   ];
@@ -492,8 +492,8 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
       <section id="experiencias" className="py-24 border-t border-gray-900 bg-[#07080a] px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <p className="text-amber-500 font-mono text-xs tracking-[0.4em] uppercase font-bold mb-3">CONOCE LAS EXPERIENCIAS</p>
-            <h3 className="font-serif text-3xl md:text-4xl text-white font-light tracking-tight">Nuestras Tres Áreas de Excelencia</h3>
+            <p className="text-amber-500 font-mono text-xs tracking-[0.4em] uppercase font-bold mb-3">CONOCE NUESTROS SERVICIOS</p>
+            <h3 className="font-serif text-3xl md:text-4xl text-white font-light tracking-tight">Servicios Seleccionados para tu Celebración</h3>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
