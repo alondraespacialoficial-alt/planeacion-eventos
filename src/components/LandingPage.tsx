@@ -45,6 +45,29 @@ interface LandingPageProps {
   onNavigate: (route: string) => void;
 }
 
+/**
+ * Imagen de servicio que se adapta a la orientación real subida desde el panel admin:
+ * horizontal usa "cover" (llena el marco), vertical usa "contain" (se ve completa, sin recortar cabezas/pies).
+ */
+function AdaptiveServiceImage({ src, alt, className, imgClassName }: { src: string; alt: string; className?: string; imgClassName?: string }) {
+  const [isPortrait, setIsPortrait] = useState(false);
+
+  return (
+    <div className={`${className || ''} ${isPortrait ? 'bg-black' : ''}`}>
+      <img
+        src={src}
+        alt={alt}
+        referrerPolicy="no-referrer"
+        onLoad={(e) => {
+          const img = e.currentTarget;
+          setIsPortrait(img.naturalHeight > img.naturalWidth);
+        }}
+        className={`w-full h-full ${isPortrait ? 'object-contain' : 'object-cover'} ${imgClassName || ''}`}
+      />
+    </div>
+  );
+}
+
 export default function LandingPage({ onNavigate }: LandingPageProps) {
   const [config, setConfig] = useState<LandingConfig>({
     hero_title: 'Celebra tu Evento',
@@ -648,11 +671,11 @@ ${extraStr}`;
                 onClick={() => setActiveServiceDetail({ title: srv.title, description: srv.description, image_url: srv.image_url, price: srv.price_estimated, categoryLabel })}
               >
                 <div className="h-48 overflow-hidden relative">
-                  <img 
-                    src={srv.image_url} 
-                    alt={srv.title} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    referrerPolicy="no-referrer"
+                  <AdaptiveServiceImage
+                    src={srv.image_url}
+                    alt={srv.title}
+                    className="w-full h-full"
+                    imgClassName="group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute top-3 left-3 px-2 py-1 rounded bg-black/75 border border-amber-500/20 text-[9px] font-mono tracking-widest text-amber-500 uppercase font-semibold">
                     {categoryLabel}
@@ -908,11 +931,10 @@ ${extraStr}`;
 
               {activeServiceDetail.image_url && (
                 <div className="h-64 md:h-72 w-full overflow-hidden relative">
-                  <img 
-                    src={activeServiceDetail.image_url} 
-                    alt={activeServiceDetail.title} 
-                    className="w-full h-full object-cover" 
-                    referrerPolicy="no-referrer"
+                  <AdaptiveServiceImage
+                    src={activeServiceDetail.image_url}
+                    alt={activeServiceDetail.title}
+                    className="w-full h-full"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0d0e12] via-transparent to-transparent" />
                   {activeServiceDetail.categoryLabel && (
