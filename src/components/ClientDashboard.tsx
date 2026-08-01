@@ -90,6 +90,8 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
   const [vendorStatus, setVendorStatus] = useState<'contratado' | 'en_proceso' | 'cotizando' | 'pendiente'>('contratado');
   const [vendorAmount, setVendorAmount] = useState<string>('');
   const [vendorNotes, setVendorNotes] = useState('');
+  const [vendorSearchQuery, setVendorSearchQuery] = useState('');
+  const [vendorCategoryFilter, setVendorCategoryFilter] = useState('todas');
 
   // Elegant Toast notification state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -311,6 +313,19 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
     const matchesStatus = statusFilter === 'all' ? true : rsvp.attendance === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  // Filtered vendors/servicios: por categoría y texto libre (nombre, notas, teléfono)
+  const filteredVendors = vendors
+    .filter(v => vendorCategoryFilter === 'todas' || v.category === vendorCategoryFilter)
+    .filter(v => {
+      const query = vendorSearchQuery.trim().toLowerCase();
+      if (!query) return true;
+      return (
+        v.vendor_name.toLowerCase().includes(query) ||
+        (v.notes || '').toLowerCase().includes(query) ||
+        v.contact_phone.includes(query)
+      );
+    });
 
   // Action: Accept/Approve a Quote in client portal
   const handleApproveQuote = async (quoteId: string) => {
@@ -1311,8 +1326,37 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
 
               {/* Vendors List Table */}
               <div className="bg-[#0d0e12] border border-gray-800 rounded-2xl overflow-hidden shadow-2xl">
-                <div className="p-6 border-b border-gray-800 bg-black/40">
+                <div className="p-6 border-b border-gray-800 bg-black/40 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                   <h4 className="font-serif text-lg text-white">Directorio de Proveedores y Coordinación</h4>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative">
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                      <input
+                        type="text"
+                        value={vendorSearchQuery}
+                        onChange={(e) => setVendorSearchQuery(e.target.value)}
+                        placeholder="Buscar proveedor, teléfono o nota..."
+                        className="pl-9 pr-3 py-2.5 rounded-xl bg-[#14161c] border border-gray-800 text-white text-xs font-light placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition-colors w-full sm:w-64"
+                      />
+                    </div>
+
+                    <select
+                      value={vendorCategoryFilter}
+                      onChange={(e) => setVendorCategoryFilter(e.target.value)}
+                      className="px-3 py-2.5 rounded-xl bg-[#14161c] border border-gray-800 text-white text-xs focus:outline-none focus:border-amber-500/50"
+                    >
+                      <option value="todas">Todas las categorías</option>
+                      <option value="Florería & Decoración">Florería & Decoración</option>
+                      <option value="Fotografía & Video">Fotografía & Video</option>
+                      <option value="Pastel & Repostería">Pastel & Repostería</option>
+                      <option value="Catering & Banquete">Catering & Banquete</option>
+                      <option value="Música / DJ / Grupo">Música / DJ / Grupo</option>
+                      <option value="Maquillaje & Peinado">Maquillaje & Peinado</option>
+                      <option value="Vestido / Traje">Vestido / Traje</option>
+                      <option value="Otro Proveedor">Otro Proveedor</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -1329,8 +1373,8 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800/40">
-                      {vendors.length > 0 ? (
-                        vendors.map((v) => (
+                      {filteredVendors.length > 0 ? (
+                        filteredVendors.map((v) => (
                           <tr key={v.id} className="hover:bg-gray-800/10 text-xs transition-colors">
                             <td className="py-4 px-6 font-mono text-amber-400 font-bold">
                               {v.category}
@@ -1386,7 +1430,11 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                         <tr>
                           <td colSpan={7} className="py-12 text-center text-gray-500">
                             <ClipboardList className="w-8 h-8 text-gray-700 mx-auto mb-2" />
-                            <p className="text-xs">No has agregado proveedores a tu checklist de coordinación.</p>
+                            <p className="text-xs">
+                              {vendors.length === 0
+                                ? 'No has agregado proveedores a tu checklist de coordinación.'
+                                : 'No encontramos proveedores que coincidan con tu búsqueda.'}
+                            </p>
                           </td>
                         </tr>
                       )}

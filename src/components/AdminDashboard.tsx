@@ -46,7 +46,8 @@ import {
   CheckCircle,
   AlertTriangle,
   ShieldCheck,
-  UserCog
+  UserCog,
+  Search
 } from 'lucide-react';
 import { Event, UserSession, Service, Lead, Quote, QuoteItem, LandingConfig, PaymentReceipt, UserProfile, GalleryItem } from '../types';
 import { AppService, isSupabaseConfigured, SUPABASE_SQL_BLUEPRINT } from '../lib/supabase';
@@ -70,6 +71,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
 
   // Core Entity States
   const [events, setEvents] = useState<Event[]>([]);
+  const [eventSearch, setEventSearch] = useState('');
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [payments, setPayments] = useState<PaymentReceipt[]>([]);
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'pending' | 'verified' | 'rejected'>('all');
@@ -1021,6 +1023,17 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     );
   }
 
+  // Buscador de la pestaña Eventos/Clientes: filtra por título, cliente o ubicación
+  const filteredEvents = events.filter(ev => {
+    const query = eventSearch.trim().toLowerCase();
+    if (!query) return true;
+    return (
+      ev.title.toLowerCase().includes(query) ||
+      ev.client_email.toLowerCase().includes(query) ||
+      ev.location_name.toLowerCase().includes(query)
+    );
+  });
+
   return (
     <div className="min-h-screen bg-[#07080a] text-gray-200 font-sans pb-16 selection:bg-amber-400 selection:text-black">
       
@@ -1190,8 +1203,19 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
               </button>
             </div>
 
+            <div className="relative max-w-md">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <input
+                type="text"
+                value={eventSearch}
+                onChange={(e) => setEventSearch(e.target.value)}
+                placeholder="Buscar por evento, cliente o ubicación..."
+                className="w-full pl-11 pr-4 py-3 rounded-full bg-[#0d0e12] border border-gray-800 text-white text-xs font-light placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition-colors"
+              />
+            </div>
+
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {events.map(ev => (
+              {filteredEvents.map(ev => (
                 <div key={ev.id} className="rounded-xl border border-gray-800 bg-[#0d0e12] overflow-hidden flex flex-col justify-between">
                   <div className="h-40 w-full relative">
                     <img src={ev.cover_url} alt={ev.title} className="w-full h-full object-cover opacity-60" />
@@ -1266,6 +1290,12 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                 </div>
               ))}
             </div>
+
+            {filteredEvents.length === 0 && (
+              <p className="text-center text-gray-500 text-xs font-mono py-10">
+                No encontramos tarjetas/eventos que coincidan con tu búsqueda.
+              </p>
+            )}
           </div>
         )}
 
