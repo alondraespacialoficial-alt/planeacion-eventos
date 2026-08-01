@@ -118,6 +118,15 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   const [evtMusicUrl, setEvtMusicUrl] = useState('');
   const [evtShowBranding, setEvtShowBranding] = useState(true);
   const [evtPublicShowcase, setEvtPublicShowcase] = useState(false);
+  const [evtDressCode, setEvtDressCode] = useState('');
+  const [evtDressCodeNote, setEvtDressCodeNote] = useState('');
+  const [evtGiftRegistry, setEvtGiftRegistry] = useState<{ store: string; url: string }[]>([]);
+  const [newGiftStore, setNewGiftStore] = useState('');
+  const [newGiftUrl, setNewGiftUrl] = useState('');
+  const [evtItinerary, setEvtItinerary] = useState<{ time: string; label: string }[]>([]);
+  const [newItineraryTime, setNewItineraryTime] = useState('');
+  const [newItineraryLabel, setNewItineraryLabel] = useState('');
+  const [evtRestrictionsNote, setEvtRestrictionsNote] = useState('');
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState('');
   const [uploadingGallery, setUploadingGallery] = useState(false);
@@ -344,6 +353,11 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     setEvtMusicUrl('');
     setEvtShowBranding(true);
     setEvtPublicShowcase(false);
+    setEvtDressCode('');
+    setEvtDressCodeNote('');
+    setEvtGiftRegistry([]);
+    setEvtItinerary([]);
+    setEvtRestrictionsNote('');
     setUploadedFileName('');
     setIsEventFormOpen(true);
   };
@@ -365,6 +379,11 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     setEvtMusicUrl(evt.music_url || '');
     setEvtShowBranding(evt.show_branding !== false);
     setEvtPublicShowcase(evt.public_showcase === true);
+    setEvtDressCode(evt.dress_code || '');
+    setEvtDressCodeNote(evt.dress_code_note || '');
+    setEvtGiftRegistry(evt.gift_registry || []);
+    setEvtItinerary(evt.itinerary || []);
+    setEvtRestrictionsNote(evt.restrictions_note || '');
     setIsEventFormOpen(true);
   };
 
@@ -390,6 +409,11 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
         music_url: evtMusicUrl,
         show_branding: evtShowBranding,
         public_showcase: evtPublicShowcase,
+        dress_code: evtDressCode,
+        dress_code_note: evtDressCodeNote,
+        gift_registry: evtGiftRegistry,
+        itinerary: evtItinerary,
+        restrictions_note: evtRestrictionsNote,
         rsvp_deadline: evtRsvpDeadline,
         status: (editingEventId ? events.find(ev => ev.id === editingEventId)?.status : 'active') || 'active',
         client_email: evtClientEmail.trim().toLowerCase()
@@ -489,6 +513,28 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
 
   const handleRemoveGalleryImage = (index: number) => {
     setEvtGalleryUrls(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddGiftItem = () => {
+    if (!newGiftStore.trim() || !newGiftUrl.trim()) return;
+    setEvtGiftRegistry(prev => [...prev, { store: newGiftStore.trim(), url: newGiftUrl.trim() }]);
+    setNewGiftStore('');
+    setNewGiftUrl('');
+  };
+
+  const handleRemoveGiftItem = (index: number) => {
+    setEvtGiftRegistry(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddItineraryItem = () => {
+    if (!newItineraryTime.trim() || !newItineraryLabel.trim()) return;
+    setEvtItinerary(prev => [...prev, { time: newItineraryTime.trim(), label: newItineraryLabel.trim() }]);
+    setNewItineraryTime('');
+    setNewItineraryLabel('');
+  };
+
+  const handleRemoveItineraryItem = (index: number) => {
+    setEvtItinerary(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleMusicFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2336,6 +2382,55 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                   <input type="file" onChange={handleMusicFileChange} accept="audio/*" className="absolute inset-0 opacity-0 cursor-pointer" />
                   {uploadingMusic ? <p className="text-amber-500">Subiendo audio...</p> : <p className="text-gray-500">Arrastre o seleccione un archivo de audio (mp3) para almacenar en Supabase Storage</p>}
                 </div>
+              </div>
+
+              <div className="border border-gray-800 rounded-lg p-4 bg-black/20 space-y-2">
+                <label className="block font-mono text-gray-400 mb-1">CÓDIGO DE VESTIMENTA (OPCIONAL)</label>
+                <input type="text" value={evtDressCode} onChange={(e) => setEvtDressCode(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" placeholder="Ej. Formal / Etiqueta rigurosa" />
+                <input type="text" value={evtDressCodeNote} onChange={(e) => setEvtDressCodeNote(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" placeholder="Nota opcional, ej. Evitar el color blanco y negro" />
+              </div>
+
+              <div className="border border-gray-800 rounded-lg p-4 bg-black/20 space-y-2">
+                <label className="block font-mono text-gray-400 mb-1">ITINERARIO DEL EVENTO (OPCIONAL)</label>
+                {evtItinerary.length > 0 && (
+                  <div className="space-y-1.5 mb-2">
+                    {evtItinerary.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between gap-2 bg-black/30 border border-gray-800 rounded px-3 py-1.5">
+                        <span className="text-white"><strong className="text-amber-500">{item.time}</strong> — {item.label}</span>
+                        <button type="button" onClick={() => handleRemoveItineraryItem(index)} className="text-gray-500 hover:text-red-400">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input type="time" value={newItineraryTime} onChange={(e) => setNewItineraryTime(e.target.value)} className="w-28 bg-black/40 border border-gray-800 rounded p-2.5 text-white" />
+                  <input type="text" value={newItineraryLabel} onChange={(e) => setNewItineraryLabel(e.target.value)} className="flex-1 bg-black/40 border border-gray-800 rounded p-2.5 text-white" placeholder="Ej. Ceremonia religiosa" />
+                  <button type="button" onClick={handleAddItineraryItem} className="px-3 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-500 rounded hover:bg-amber-500 hover:text-black transition-colors">+</button>
+                </div>
+              </div>
+
+              <div className="border border-gray-800 rounded-lg p-4 bg-black/20 space-y-2">
+                <label className="block font-mono text-gray-400 mb-1">MESA DE REGALOS (OPCIONAL)</label>
+                {evtGiftRegistry.length > 0 && (
+                  <div className="space-y-1.5 mb-2">
+                    {evtGiftRegistry.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between gap-2 bg-black/30 border border-gray-800 rounded px-3 py-1.5">
+                        <span className="text-white">{item.store} <span className="text-gray-500 text-[10px]">({item.url})</span></span>
+                        <button type="button" onClick={() => handleRemoveGiftItem(index)} className="text-gray-500 hover:text-red-400">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input type="text" value={newGiftStore} onChange={(e) => setNewGiftStore(e.target.value)} className="w-32 bg-black/40 border border-gray-800 rounded p-2.5 text-white" placeholder="Tienda" />
+                  <input type="text" value={newGiftUrl} onChange={(e) => setNewGiftUrl(e.target.value)} className="flex-1 bg-black/40 border border-gray-800 rounded p-2.5 text-white" placeholder="https://..." />
+                  <button type="button" onClick={handleAddGiftItem} className="px-3 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-500 rounded hover:bg-amber-500 hover:text-black transition-colors">+</button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-mono text-gray-400 mb-1">RESTRICCIONES (OPCIONAL)</label>
+                <input type="text" value={evtRestrictionsNote} onChange={(e) => setEvtRestrictionsNote(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" placeholder="Ej. Evento solo para adultos / No incluye mascotas" />
               </div>
 
               <div className="space-y-3 border border-gray-800 rounded-lg p-4 bg-black/20">

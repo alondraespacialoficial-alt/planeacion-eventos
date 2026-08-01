@@ -1659,6 +1659,11 @@ CREATE TABLE IF NOT EXISTS public.eventos (
     music_url TEXT,
     show_branding BOOLEAN DEFAULT true,
     public_showcase BOOLEAN DEFAULT false,
+    dress_code TEXT,
+    dress_code_note TEXT,
+    gift_registry JSONB DEFAULT '[]',
+    itinerary JSONB DEFAULT '[]',
+    restrictions_note TEXT,
     rsvp_deadline DATE NOT NULL,
     status TEXT CHECK (status IN ('active', 'closed', 'archived')) DEFAULT 'active',
     created_by UUID REFERENCES auth.users(id),
@@ -1877,6 +1882,11 @@ ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS gallery_urls TEXT[] DEFAULT 
 ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS music_url TEXT;
 ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS show_branding BOOLEAN DEFAULT true;
 ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS public_showcase BOOLEAN DEFAULT false;
+ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS dress_code TEXT;
+ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS dress_code_note TEXT;
+ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS gift_registry JSONB DEFAULT '[]';
+ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS itinerary JSONB DEFAULT '[]';
+ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS restrictions_note TEXT;
 ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS guests_count INTEGER;
 
 ALTER TABLE public.eventos ENABLE ROW LEVEL SECURITY;

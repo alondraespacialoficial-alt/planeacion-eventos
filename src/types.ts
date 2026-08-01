@@ -19,6 +19,11 @@ export interface Event {
   music_url?: string; // audio de fondo del micrositio
   show_branding?: boolean; // si es false, oculta el botón "AURA STUDIO" que regresa a la landing (invitación privada)
   public_showcase?: boolean; // si es true, aparece en la vitrina pública de invitaciones de la landing
+  dress_code?: string; // ej. "Formal / Etiqueta rigurosa"
+  dress_code_note?: string; // ej. "Evitar el color blanco y negro"
+  gift_registry?: { store: string; url: string }[]; // links a mesas de regalo (Liverpool, Amazon, etc.)
+  itinerary?: { time: string; label: string }[]; // línea de tiempo del evento (ceremonia, cóctel, recepción...)
+  restrictions_note?: string; // ej. "Evento solo para adultos" o "No incluye mascotas"
   rsvp_deadline: string;
   status: 'active' | 'closed' | 'archived'; // active, closed, archived
   created_by: string; // user id

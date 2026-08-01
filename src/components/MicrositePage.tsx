@@ -25,7 +25,10 @@ import {
   Printer,
   Ticket,
   CheckCircle,
-  Images
+  Images,
+  Shirt,
+  Gift,
+  AlertCircle
 } from 'lucide-react';
 import { Event, RSVP } from '../types';
 import { AppService } from '../lib/supabase';
@@ -429,6 +432,82 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
           </div>
         </div>
       </section>
+
+      {/* Itinerary */}
+      {event.itinerary && event.itinerary.length > 0 && (
+        <section className="max-w-2xl mx-auto px-6 py-16 relative" id="itinerary">
+          <div className="text-center mb-10">
+            <div className="h-10 w-10 rounded-full border border-amber-500/30 flex items-center justify-center bg-amber-500/10 mx-auto mb-4">
+              <Clock className="w-4 h-4 text-amber-400" />
+            </div>
+            <h2 className="font-serif text-3xl text-white font-light">Itinerario</h2>
+          </div>
+          <div className="space-y-4">
+            {event.itinerary.map((item, index) => (
+              <div key={index} className="flex items-center gap-4 p-4 rounded-xl border border-gray-800 bg-[#0e1013]/80">
+                <span className="font-serif text-amber-400 text-lg font-medium w-16 shrink-0">{item.time}</span>
+                <span className="text-gray-300 text-sm font-light">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Dress Code & Restrictions */}
+      {(event.dress_code || event.restrictions_note) && (
+        <section className="max-w-4xl mx-auto px-6 py-8 relative">
+          <div className="grid sm:grid-cols-2 gap-6">
+            {event.dress_code && (
+              <div className="p-6 rounded-2xl border border-gray-800 bg-[#0e1013]/80">
+                <div className="h-9 w-9 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-4">
+                  <Shirt className="w-4 h-4" />
+                </div>
+                <h4 className="font-serif text-lg text-white mb-1">Código de Vestimenta</h4>
+                <p className="text-amber-400 text-sm font-medium">{event.dress_code}</p>
+                {event.dress_code_note && (
+                  <p className="text-gray-500 text-xs font-light mt-1">{event.dress_code_note}</p>
+                )}
+              </div>
+            )}
+            {event.restrictions_note && (
+              <div className="p-6 rounded-2xl border border-gray-800 bg-[#0e1013]/80">
+                <div className="h-9 w-9 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-4">
+                  <AlertCircle className="w-4 h-4" />
+                </div>
+                <h4 className="font-serif text-lg text-white mb-1">Importante</h4>
+                <p className="text-gray-400 text-sm font-light">{event.restrictions_note}</p>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Gift Registry */}
+      {event.gift_registry && event.gift_registry.length > 0 && (
+        <section className="max-w-2xl mx-auto px-6 py-16 relative" id="gift-registry">
+          <div className="text-center mb-10">
+            <div className="h-10 w-10 rounded-full border border-amber-500/30 flex items-center justify-center bg-amber-500/10 mx-auto mb-4">
+              <Gift className="w-4 h-4 text-amber-400" />
+            </div>
+            <h2 className="font-serif text-3xl text-white font-light">Mesa de Regalos</h2>
+            <p className="text-gray-400 text-xs font-light mt-2">Tu presencia es nuestro mejor regalo, pero si deseas obsequiarnos algo, aquí tienes algunas opciones.</p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {event.gift_registry.map((item, index) => (
+              <a
+                key={index}
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between gap-3 p-4 rounded-xl border border-gray-800 bg-[#0e1013]/80 hover:border-amber-500/40 transition-colors group"
+              >
+                <span className="font-serif text-white group-hover:text-amber-400 transition-colors">{item.store}</span>
+                <Gift className="w-4 h-4 text-amber-500/60 group-hover:text-amber-400 transition-colors" />
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* RSVP RSVP Form Section */}
       <section className="max-w-xl mx-auto px-6 py-12 relative z-10" id="rsvp-section">
