@@ -66,27 +66,47 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
     city: '',
     event_type: 'Boda',
     event_date: '',
-    estimated_budget: '$100k - $200k MXN',
+    estimated_budget: '$30,000 – $50,000 MXN',
     selected_services: [] as string[],
     consent: false
   });
 
   const [formSubmitted, setFormSubmitted] = useState(false);
-  const [guestsCount, setGuestsCount] = useState<number>(100);
+  const [guestsCount, setGuestsCount] = useState<number>(30);
+  const [foodType, setFoodType] = useState<'Taquiza' | 'Cazuelada' | 'Pozolada'>('Taquiza');
   const [galleryFilter, setGalleryFilter] = useState<string>('todos');
   const [activeGalleryItem, setActiveGalleryItem] = useState<GalleryItem | null>(null);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [activeServiceDetail, setActiveServiceDetail] = useState<{ title: string; description: string; image_url?: string; price: string; categoryLabel?: string } | null>(null);
   const [lastSubmittedFolio, setLastSubmittedFolio] = useState<string>('COT-2026-001');
 
-  // Interactive Estimator Calculations
-  const calculatedCatering = guestsCount * 380;
-  const calculatedBottles = Math.ceil(guestsCount / 4);
-  const calculatedWaiters = Math.ceil(guestsCount / 15);
-  const calculatedTables = Math.ceil(guestsCount / 10);
-  const selectedServicesCount = quoteForm.selected_services.length || 1;
-  const estimatedTotalMin = (guestsCount * 420) + (selectedServicesCount * 4500);
-  const estimatedTotalMax = (guestsCount * 620) + (selectedServicesCount * 8500);
+  // Estimador inicial de alimentos y personal (base preliminar, no cotiza el evento completo)
+  const FOOD_PRICES: Record<'Taquiza' | 'Cazuelada' | 'Pozolada', number> = { Taquiza: 90, Cazuelada: 90, Pozolada: 120 };
+  const WAITER_COST = 600;
+  const getWaitersCount = (guests: number): number => {
+    if (guests <= 50) return 1;
+    if (guests <= 100) return 2;
+    if (guests <= 150) return 3;
+    if (guests <= 200) return 4;
+    if (guests <= 250) return 5;
+    return 6;
+  };
+  const foodPricePerPerson = FOOD_PRICES[foodType];
+  const calculatedFoodTotal = guestsCount * foodPricePerPerson;
+  const calculatedWaiters = getWaitersCount(guestsCount);
+  const calculatedWaitersTotal = calculatedWaiters * WAITER_COST;
+  const totalPreliminar = calculatedFoodTotal + calculatedWaitersTotal;
+
+  // Categorías del cotizador: solo alimentos + meseros se calculan automático, el resto es referencia para cotización personalizada
+  const QUOTE_CATEGORIES = [
+    { title: 'Alimentos para evento', note: 'Taquiza, cazuelada o pozolada · se calcula abajo en el estimador' },
+    { title: 'Producción visual', note: 'Fotografía desde $3,700 · Video/Dron desde $5,300' },
+    { title: 'Barras y snacks', note: 'Chilaquiles, dulces, elotes, frutas o bebidas · desde $1,300' },
+    { title: 'Personal para evento', note: 'Meseros incluidos en el estimador · Hostess/Edecanes desde $700 (jornada 2h)' },
+    { title: 'Show y animación', note: 'Show Charlitron desde $2,100' },
+    { title: 'Invitaciones digitales', note: 'Invitaciones interactivas desde $250' },
+    { title: 'Restauración y enmarcado', note: 'Restauración de fotografías y enmarcado desde $200' }
+  ];
 
   useEffect(() => {
     async function loadData() {
@@ -132,6 +152,9 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
     const folioNum = `COT-2026-${Math.floor(100 + Math.random() * 900)}`;
     setLastSubmittedFolio(folioNum);
 
+    // Servicios adicionales de interés (no se suman al estimador automático de alimentos + meseros)
+    const extraServices = quoteForm.selected_services.filter(s => s !== 'Alimentos para evento');
+
     try {
       // 1. Save Lead to database so it shows up in Admin Panel
       await AppService.createLead({
@@ -140,15 +163,13 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         city: quoteForm.city,
         event_type: quoteForm.event_type,
         event_date: quoteForm.event_date || 'Sin fecha fija',
-        estimated_budget: `$${estimatedTotalMin.toLocaleString('es-MX')} - $${estimatedTotalMax.toLocaleString('es-MX')} MXN`,
+        estimated_budget: quoteForm.estimated_budget,
         services_selected: quoteForm.selected_services.length > 0 ? quoteForm.selected_services : ['Información General'],
         guests_count: guestsCount
       });
 
       // 2. Build structured WhatsApp message
-      const servicesStr = quoteForm.selected_services.length > 0 
-        ? quoteForm.selected_services.join(', ') 
-        : 'Información general de servicios';
+      const extraStr = extraServices.length > 0 ? extraServices.join(', ') : 'Ninguno';
       const formattedMessage = `¡Hola Celebra tu Evento! Me gustaría cotizar mi evento (Folio: ${folioNum}):
 • *Nombre:* ${quoteForm.name}
 • *Teléfono:* ${quoteForm.phone}
@@ -156,8 +177,15 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
 • *Tipo de Evento:* ${quoteForm.event_type}
 • *Invitados Estimados:* ${guestsCount} personas
 • *Fecha:* ${quoteForm.event_date || 'Por definir'}
-• *Presupuesto Estimado:* $${estimatedTotalMin.toLocaleString('es-MX')} - $${estimatedTotalMax.toLocaleString('es-MX')} MXN
-• *Servicios Solicitados:* ${servicesStr}`;
+• *Presupuesto de Referencia:* ${quoteForm.estimated_budget}
+
+*ESTIMACIÓN AUTOMÁTICA (alimentos + personal):*
+• Alimentos: ${foodType} ($${foodPricePerPerson} x ${guestsCount} personas) = $${calculatedFoodTotal.toLocaleString('es-MX')} MXN
+• Meseros sugeridos: ${calculatedWaiters} ($${WAITER_COST} c/u) = $${calculatedWaitersTotal.toLocaleString('es-MX')} MXN
+• *Total preliminar:* $${totalPreliminar.toLocaleString('es-MX')} MXN
+
+*SERVICIOS ADICIONALES DE INTERÉS (sujetos a cotización personalizada):*
+${extraStr}`;
 
       const waUrl = `https://wa.me/${config.whatsapp_phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(formattedMessage)}`;
       
@@ -175,19 +203,26 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
 
   const handleDownloadPdf = () => {
     const today = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
-    const items = quoteForm.selected_services.map(srv => ({
-      description: srv,
-      quantity: 1,
-      price: Math.round(estimatedTotalMin / (quoteForm.selected_services.length || 1))
-    }));
+    const extraServices = quoteForm.selected_services.filter(s => s !== 'Alimentos para evento');
 
-    items.push({
-      description: `Servicio de Banquete & Cristalería (${guestsCount} invitados)`,
-      quantity: guestsCount,
-      price: 380
-    });
+    // Solo alimentos + meseros forman el subtotal preliminar (estimación automática)
+    const items = [
+      {
+        description: `Alimentos: ${foodType} - estimación automática (${guestsCount} personas)`,
+        quantity: guestsCount,
+        price: foodPricePerPerson
+      },
+      {
+        description: `Meseros sugeridos - estimación automática (jornada de 5h)`,
+        quantity: calculatedWaiters,
+        price: WAITER_COST
+      }
+    ];
 
     const subtotal = items.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
+    const extraNote = extraServices.length > 0
+      ? `Servicio adicional sujeto a cotización personalizada: ${extraServices.join(', ')}.`
+      : 'Sin servicios adicionales seleccionados.';
 
     generateQuotePdf({
       folio: lastSubmittedFolio,
@@ -202,7 +237,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
       subtotal: subtotal,
       discountTotal: 0,
       total: subtotal,
-      observations: `Presupuesto estimado generado para ${guestsCount} asistentes con servicios: ${quoteForm.selected_services.join(', ')}.`,
+      observations: `Estimación automática (alimentos + personal) para ${guestsCount} asistentes. ${extraNote} Los valores son aproximados y funcionan como guía inicial; la propuesta final puede variar según ubicación, tipo de servicio, número de asistentes y requerimientos del evento.`,
       terms: 'Cotización válida por 15 días hábiles. Para reservar la fecha se requiere el 50% de anticipo.',
       whatsappPhone: config.whatsapp_phone,
       businessAddress: config.business_address
@@ -217,11 +252,12 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
       city: '',
       event_type: 'Boda',
       event_date: '',
-      estimated_budget: '$100k - $200k MXN',
+      estimated_budget: '$30,000 – $50,000 MXN',
       selected_services: [],
       consent: false
     });
-    setGuestsCount(100);
+    setGuestsCount(30);
+    setFoodType('Taquiza');
     const elem = document.getElementById('cotizar-section');
     if (elem) elem.scrollIntoView({ behavior: 'smooth' });
   };
@@ -859,7 +895,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
             <p className="text-amber-500 font-mono text-xs tracking-[0.4em] uppercase font-bold mb-3">COTIZADOR INMEDIATO</p>
             <h3 className="font-serif text-3xl md:text-4xl text-white font-light tracking-tight">Arma el presupuesto preliminar de tu evento</h3>
             <p className="text-gray-400 text-xs font-light mt-4 leading-relaxed">
-              Selecciona los servicios que te interesen y calcula de forma interactiva según el número de invitados. Te generaremos un presupuesto formal descargable en PDF y mensaje directo para WhatsApp.
+              Selecciona los servicios que te interesan y obtén una estimación inicial según el número de invitados. Algunos servicios se cotizan de forma personalizada de acuerdo con el alcance, la duración y el tipo de celebración.
             </p>
           </div>
 
@@ -922,27 +958,23 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                     1. SELECCIONA LOS CONCEPTOS QUE TE INTERESAN:
                   </label>
                   <div className="grid sm:grid-cols-2 gap-3">
-                    {[
-                      'Producción Audiovisual Premium',
-                      'Coordinación y Logística Total',
-                      'Invitaciones Digitales Inteligentes',
-                      'Servicio de Catering & Meseros',
-                      'Decoración & Ambientación Floral',
-                      'Audio Profesional & DJ'
-                    ].map((title, idx) => {
-                      const isSelected = quoteForm.selected_services.includes(title);
+                    {QUOTE_CATEGORIES.map((cat, idx) => {
+                      const isSelected = quoteForm.selected_services.includes(cat.title);
                       return (
                         <div 
                           key={idx}
-                          onClick={() => handleServiceSelect(title)}
-                          className={`p-4 rounded-xl border text-left cursor-pointer transition-all flex items-center justify-between ${
+                          onClick={() => handleServiceSelect(cat.title)}
+                          className={`p-4 rounded-xl border text-left cursor-pointer transition-all flex items-center justify-between gap-3 ${
                             isSelected 
                               ? 'border-amber-500 bg-amber-500/5 text-white shadow-lg shadow-amber-500/5' 
                               : 'border-gray-800 bg-[#0a0b0d] hover:border-gray-700 text-gray-400'
                           }`}
                         >
-                          <span className="text-xs font-medium">{title}</span>
-                          <div className={`h-4 w-4 rounded border flex items-center justify-center transition-all ${
+                          <div>
+                            <span className="text-xs font-medium block">{cat.title}</span>
+                            <span className="text-[10px] text-gray-500 font-light mt-0.5 block">{cat.note}</span>
+                          </div>
+                          <div className={`h-4 w-4 rounded border flex items-center justify-center transition-all shrink-0 ${
                             isSelected ? 'bg-amber-500 border-amber-500 text-black' : 'border-gray-600'
                           }`}>
                             {isSelected && <CheckCircle className="w-3.5 h-3.5 text-black fill-black" />}
@@ -953,20 +985,21 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                   </div>
                 </div>
 
-                {/* CALCULADORA ESTIMATIVA PARA EVENTOS (Invitados, Banquetes, Bebidas) */}
+                {/* ESTIMADOR INICIAL DE ALIMENTOS Y PERSONAL (única parte con cálculo automático) */}
                 <div className="p-6 rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/5 to-transparent space-y-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                       <span className="px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-500 font-mono text-[10px] tracking-widest uppercase font-bold border border-amber-500/30">
-                        CALCULADORA ESTIMATIVA DE EVENTO
+                        ESTIMACIÓN AUTOMÁTICA
                       </span>
-                      <h4 className="font-serif text-lg text-white font-medium mt-1">Estimador de Asistentes, Banquete & Bebidas</h4>
+                      <h4 className="font-serif text-lg text-white font-medium mt-1">Estimador inicial de alimentos y personal</h4>
+                      <p className="text-gray-500 text-[11px] font-light mt-1">Calcula una referencia aproximada de alimentos y apoyo operativo según el número de asistentes.</p>
                     </div>
                     
                     <div className="flex items-center gap-3 bg-[#0a0b0d] border border-gray-800 p-2 rounded-xl">
                       <button
                         type="button"
-                        onClick={() => setGuestsCount(Math.max(20, guestsCount - 10))}
+                        onClick={() => setGuestsCount(Math.max(30, guestsCount - 10))}
                         className="p-1.5 rounded-lg bg-gray-900 border border-gray-800 text-gray-300 hover:text-amber-500 hover:border-amber-500/40 cursor-pointer"
                       >
                         <Minus className="w-4 h-4" />
@@ -977,7 +1010,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                       </div>
                       <button
                         type="button"
-                        onClick={() => setGuestsCount(Math.min(1000, guestsCount + 10))}
+                        onClick={() => setGuestsCount(Math.min(300, guestsCount + 10))}
                         className="p-1.5 rounded-lg bg-gray-900 border border-gray-800 text-gray-300 hover:text-amber-500 hover:border-amber-500/40 cursor-pointer"
                       >
                         <Plus className="w-4 h-4" />
@@ -985,22 +1018,42 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                     </div>
                   </div>
 
+                  {/* Selector de tipo de alimentos */}
+                  <div className="space-y-2">
+                    <label className="block text-gray-400 text-[11px] uppercase font-mono tracking-widest font-semibold">TIPO DE ALIMENTOS</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['Taquiza', 'Cazuelada', 'Pozolada'] as const).map(type => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => setFoodType(type)}
+                          className={`py-2.5 px-2 rounded-lg border text-xs font-mono font-semibold tracking-wide transition-all cursor-pointer ${
+                            foodType === type
+                              ? 'border-amber-500 bg-amber-500/10 text-amber-400'
+                              : 'border-gray-800 bg-[#0a0b0d] text-gray-400 hover:border-gray-700'
+                          }`}
+                        >
+                          {type} <span className="block text-[9px] text-gray-500">${FOOD_PRICES[type]}/persona</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Interactive slider */}
                   <div className="space-y-2">
                     <input 
                       type="range"
-                      min={20}
-                      max={500}
+                      min={30}
+                      max={300}
                       step={10}
                       value={guestsCount}
                       onChange={(e) => setGuestsCount(Number(e.target.value))}
                       className="w-full accent-amber-500 cursor-pointer bg-gray-800 h-2 rounded-lg"
                     />
                     <div className="flex justify-between text-[10px] font-mono text-gray-500">
-                      <span>20 pax</span>
-                      <span>100 pax</span>
-                      <span>250 pax</span>
-                      <span>500 pax</span>
+                      <span>30 pax</span>
+                      <span>165 pax</span>
+                      <span>300 pax</span>
                     </div>
                   </div>
 
@@ -1009,39 +1062,43 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                     <div className="p-3 bg-[#0a0b0d] border border-gray-800/80 rounded-xl">
                       <div className="flex items-center gap-1.5 text-amber-500 mb-1">
                         <Utensils className="w-3.5 h-3.5" />
-                        <span className="text-[10px] font-mono font-bold uppercase">Banquete Gourmet</span>
+                        <span className="text-[10px] font-mono font-bold uppercase">Servicio de alimentos</span>
                       </div>
-                      <p className="font-mono text-sm font-semibold text-white">${calculatedCatering.toLocaleString('es-MX')} MXN</p>
-                      <p className="text-[9px] text-gray-500 font-mono mt-0.5">~$380 MXN / platillo</p>
-                    </div>
-
-                    <div className="p-3 bg-[#0a0b0d] border border-gray-800/80 rounded-xl">
-                      <div className="flex items-center gap-1.5 text-amber-500 mb-1">
-                        <Wine className="w-3.5 h-3.5" />
-                        <span className="text-[10px] font-mono font-bold uppercase">Barra Libre / Bebida</span>
-                      </div>
-                      <p className="font-mono text-sm font-semibold text-white">{calculatedBottles} Botellas</p>
-                      <p className="text-[9px] text-gray-500 font-mono mt-0.5">1 bot. c/4 invitados</p>
-                    </div>
-
-                    <div className="p-3 bg-[#0a0b0d] border border-gray-800/80 rounded-xl">
-                      <div className="flex items-center gap-1.5 text-amber-500 mb-1">
-                        <Users className="w-3.5 h-3.5" />
-                        <span className="text-[10px] font-mono font-bold uppercase">Meseros Sugeridos</span>
-                      </div>
-                      <p className="font-mono text-sm font-semibold text-white">{calculatedWaiters} Meseros</p>
-                      <p className="text-[9px] text-gray-500 font-mono mt-0.5">1 c/15 personas</p>
+                      <p className="font-mono text-sm font-semibold text-white">{foodType}</p>
+                      <p className="text-[9px] text-gray-500 font-mono mt-0.5">Total: ${calculatedFoodTotal.toLocaleString('es-MX')} MXN</p>
                     </div>
 
                     <div className="p-3 bg-[#0a0b0d] border border-gray-800/80 rounded-xl">
                       <div className="flex items-center gap-1.5 text-amber-500 mb-1">
                         <DollarSign className="w-3.5 h-3.5" />
-                        <span className="text-[10px] font-mono font-bold uppercase">Presupuesto Rango</span>
+                        <span className="text-[10px] font-mono font-bold uppercase">Costo por persona</span>
                       </div>
-                      <p className="font-mono text-xs font-bold text-amber-400">${(estimatedTotalMin / 1000).toFixed(0)}k - ${(estimatedTotalMax / 1000).toFixed(0)}k MXN</p>
-                      <p className="text-[9px] text-gray-500 font-mono mt-0.5">Aproximado total</p>
+                      <p className="font-mono text-sm font-semibold text-white">${foodPricePerPerson} MXN</p>
+                      <p className="text-[9px] text-gray-500 font-mono mt-0.5">Según tipo de alimento</p>
+                    </div>
+
+                    <div className="p-3 bg-[#0a0b0d] border border-gray-800/80 rounded-xl">
+                      <div className="flex items-center gap-1.5 text-amber-500 mb-1">
+                        <Users className="w-3.5 h-3.5" />
+                        <span className="text-[10px] font-mono font-bold uppercase">Personal sugerido</span>
+                      </div>
+                      <p className="font-mono text-sm font-semibold text-white">{calculatedWaiters} {calculatedWaiters === 1 ? 'mesero' : 'meseros'}</p>
+                      <p className="text-[9px] text-gray-500 font-mono mt-0.5">$600 / jornada de 5h c/u</p>
+                    </div>
+
+                    <div className="p-3 bg-[#0a0b0d] border border-gray-800/80 rounded-xl">
+                      <div className="flex items-center gap-1.5 text-amber-500 mb-1">
+                        <Wine className="w-3.5 h-3.5" />
+                        <span className="text-[10px] font-mono font-bold uppercase">Rango preliminar</span>
+                      </div>
+                      <p className="font-mono text-xs font-bold text-amber-400">${totalPreliminar.toLocaleString('es-MX')} MXN</p>
+                      <p className="text-[9px] text-gray-500 font-mono mt-0.5">Alimentos + meseros</p>
                     </div>
                   </div>
+
+                  <p className="text-[10px] text-gray-500 font-light leading-relaxed pt-1">
+                    Los valores mostrados son aproximados y funcionan como guía inicial. La propuesta final puede variar según ubicación, tipo de servicio, número de asistentes y requerimientos del evento.
+                  </p>
                 </div>
 
                 {/* 2. Event details */}
@@ -1057,11 +1114,14 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                         onChange={(e) => setQuoteForm(prev => ({ ...prev, event_type: e.target.value }))}
                         className="w-full bg-[#0a0b0d] border border-gray-800 rounded-lg py-3 px-4 text-xs text-white focus:outline-none focus:border-amber-500"
                       >
-                        <option value="Boda">Boda de Ensueño</option>
-                        <option value="XV Años">XV Años Temáticos</option>
-                        <option value="Graduación">Gala de Graduación</option>
-                        <option value="Aniversario">Aniversario o Cóctel</option>
-                        <option value="Corporativo">Evento Corporativo</option>
+                        <option value="Boda">Boda</option>
+                        <option value="XV Años">XV Años</option>
+                        <option value="Graduación">Graduación</option>
+                        <option value="Cumpleaños">Cumpleaños</option>
+                        <option value="Bautizo / Primera Comunión">Bautizo / Primera Comunión</option>
+                        <option value="Evento corporativo">Evento corporativo</option>
+                        <option value="Aniversario">Aniversario</option>
+                        <option value="Otro">Otro</option>
                       </select>
                     </div>
 
@@ -1095,10 +1155,13 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                         onChange={(e) => setQuoteForm(prev => ({ ...prev, estimated_budget: e.target.value }))}
                         className="w-full bg-[#0a0b0d] border border-gray-800 rounded-lg py-3 px-4 text-xs text-white focus:outline-none focus:border-amber-500"
                       >
-                        <option value="Menos de $100k MXN">Menos de $100,000 MXN</option>
-                        <option value="$100k - $200k MXN">$100,000 - $200,000 MXN</option>
-                        <option value="$200k - $400k MXN">$200,000 - $400,000 MXN</option>
-                        <option value="Más de $400k MXN">Más de $400,000 MXN (Premium)</option>
+                        <option value="$5,000 – $15,000 MXN">$5,000 – $15,000 MXN</option>
+                        <option value="$15,000 – $30,000 MXN">$15,000 – $30,000 MXN</option>
+                        <option value="$30,000 – $50,000 MXN">$30,000 – $50,000 MXN</option>
+                        <option value="$50,000 – $80,000 MXN">$50,000 – $80,000 MXN</option>
+                        <option value="$80,000 – $120,000 MXN">$80,000 – $120,000 MXN</option>
+                        <option value="$120,000 – $200,000 MXN">$120,000 – $200,000 MXN</option>
+                        <option value="Más de $200,000 MXN">Más de $200,000 MXN</option>
                       </select>
                     </div>
                   </div>
