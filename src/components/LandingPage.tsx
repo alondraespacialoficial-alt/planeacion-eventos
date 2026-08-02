@@ -395,12 +395,13 @@ ${extraStr}`;
           </div>
 
           <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold tracking-widest text-gray-400 font-mono">
-            <a href="#about" className="hover:text-amber-500 transition-colors uppercase">QUIÉNES SOMOS</a>
-            <a href="#experiencias" className="hover:text-amber-500 transition-colors uppercase">EXPERIENCIAS</a>
-            <a href="#galeria-producciones" className="hover:text-amber-500 transition-colors uppercase">GALERÍA</a>
-            <a href="#servicios-detallados" className="hover:text-amber-500 transition-colors uppercase">SERVICIOS</a>
-            <a href="#cotizador-rapido" className="hover:text-amber-500 transition-colors uppercase">COTIZADOR</a>
-            <a href="#preguntas-frecuentes" className="hover:text-amber-500 transition-colors uppercase">FAQ</a>
+            <a href="#top" className="hover:text-amber-500 transition-colors uppercase">INICIO</a>
+            <a href="#about" className="hover:text-amber-500 transition-colors uppercase">QUIENES SOMOS</a>
+            <a href="#experiencias" className="hover:text-amber-500 transition-colors uppercase">SERVICIOS DESTACADOS</a>
+            <a href="#galeria-producciones" className="hover:text-amber-500 transition-colors uppercase">GALERIA DE PRODUCCIONES</a>
+            <a href="#servicios-detallados" className="hover:text-amber-500 transition-colors uppercase">CATALOGO DE SERVICIOS</a>
+            <a href="#cotizador-rapido" className="hover:text-amber-500 transition-colors uppercase">PRECOTIZADOR</a>
+            <a href="#preguntas-frecuentes" className="hover:text-amber-500 transition-colors uppercase">PREGUNTAS FRECUENTES</a>
           </nav>
 
           <div className="flex items-center gap-3">
@@ -434,12 +435,13 @@ ${extraStr}`;
               className="lg:hidden overflow-hidden"
             >
               <nav className="flex flex-col text-xs font-semibold tracking-widest text-gray-400 font-mono pt-4">
-                <a href="#about" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-gray-900 hover:text-amber-500 transition-colors uppercase">QUIÉNES SOMOS</a>
-                <a href="#experiencias" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-gray-900 hover:text-amber-500 transition-colors uppercase">EXPERIENCIAS</a>
-                <a href="#galeria-producciones" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-gray-900 hover:text-amber-500 transition-colors uppercase">GALERÍA</a>
-                <a href="#servicios-detallados" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-gray-900 hover:text-amber-500 transition-colors uppercase">SERVICIOS</a>
-                <a href="#cotizador-rapido" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-b border-gray-900 hover:text-amber-500 transition-colors uppercase">COTIZADOR</a>
-                <a href="#preguntas-frecuentes" onClick={() => setMobileMenuOpen(false)} className="py-3 border-b border-gray-900 hover:text-amber-500 transition-colors uppercase">FAQ</a>
+                <a href="#top" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-gray-900 hover:text-amber-500 transition-colors uppercase">INICIO</a>
+                <a href="#about" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-gray-900 hover:text-amber-500 transition-colors uppercase">QUIENES SOMOS</a>
+                <a href="#experiencias" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-gray-900 hover:text-amber-500 transition-colors uppercase">SERVICIOS DESTACADOS</a>
+                <a href="#galeria-producciones" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-gray-900 hover:text-amber-500 transition-colors uppercase">GALERIA DE PRODUCCIONES</a>
+                <a href="#servicios-detallados" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-gray-900 hover:text-amber-500 transition-colors uppercase">CATALOGO DE SERVICIOS</a>
+                <a href="#cotizador-rapido" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-gray-900 hover:text-amber-500 transition-colors uppercase">PRECOTIZADOR</a>
+                <a href="#preguntas-frecuentes" onClick={() => setMobileMenuOpen(false)} className="py-3 border-t border-b border-gray-900 hover:text-amber-500 transition-colors uppercase">PREGUNTAS FRECUENTES</a>
               </nav>
             </motion.div>
           )}

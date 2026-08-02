@@ -1,0 +1,23 @@
+{
+  "name": "Celebra tu Evento",
+  "short_name": "Celebra",
+  "description": "Planeacion de eventos, invitaciones digitales y precotizacion en San Luis Potosi.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#07080a",
+  "theme_color": "#07080a",
+  "lang": "es-MX",
+  "icons": [
+    {
+      "src": "https://eztuwxavcvqingoycorg.supabase.co/storage/v1/object/public/event-assets/covers/u7w7qwsdi0s.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://eztuwxavcvqingoycorg.supabase.co/storage/v1/object/public/event-assets/covers/u7w7qwsdi0s.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

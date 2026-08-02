@@ -406,7 +406,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
               rel="noopener noreferrer"
               className="text-[10px] font-mono text-amber-400 hover:underline tracking-wider"
             >
-              ABRIR EN WAZE / MAPS
+              ABRIR UBICACION EN MAPAS
             </a>
           </div>
           <div className="aspect-[16/9] w-full bg-gray-900/40 relative">
@@ -520,7 +520,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
               <Sparkles className="w-4 h-4 text-amber-400" />
             </div>
             <h2 className="font-serif text-2xl text-white font-light tracking-wide">Confirmación de Asistencia</h2>
-            <p className="text-xs text-gray-500 font-mono tracking-wider uppercase mt-1">RSVP • CONFIRMA TU LUGAR</p>
+            <p className="text-xs text-gray-500 font-mono tracking-wider uppercase mt-1">RSVP - CONFIRMA TU LUGAR</p>
             <div className="w-10 h-[1px] bg-amber-500/40 mx-auto mt-4"></div>
           </div>
 
@@ -583,15 +583,15 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
                     <div className="grid grid-cols-2 gap-3 text-left text-xs font-mono border-t border-b border-gray-800 py-4">
                       <div>
                         <p className="text-[9px] text-gray-500 uppercase">FECHA</p>
-                        <p className="text-white font-medium">📅 {event.date}</p>
+                        <p className="text-white font-medium">{event.date}</p>
                       </div>
                       <div>
                         <p className="text-[9px] text-gray-500 uppercase">HORARIO</p>
-                        <p className="text-white font-medium">⏰ {event.time} HRS</p>
+                        <p className="text-white font-medium">{event.time} HRS</p>
                       </div>
                       <div className="col-span-2">
                         <p className="text-[9px] text-gray-500 uppercase">LUGAR</p>
-                        <p className="text-white font-medium truncate">📍 {event.location_name}</p>
+                        <p className="text-white font-medium truncate">{event.location_name}</p>
                       </div>
                     </div>
 
@@ -817,7 +817,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
 
               {/* Small trust note */}
               <p className="text-[10px] text-gray-600 text-center font-mono uppercase tracking-wider">
-                🔒 CONEXIÓN CIFRADA SEGURO CON SUPABASE RLS
+                CONEXION CIFRADA Y SEGURA CON SUPABASE RLS
               </p>
             </form>
           )}
@@ -840,7 +840,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
                 onClick={() => setShowLegalDialog(false)}
                 className="text-gray-500 hover:text-white font-mono text-sm"
               >
-                Cerrar [X]
+                Cerrar
               </button>
             </div>
             
