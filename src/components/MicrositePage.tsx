@@ -238,7 +238,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
               id="microsite-back-home"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              AURA STUDIO
+              CELEBRA STUDIO
             </button>
           </div>
         )}
@@ -847,7 +847,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
             <div className="max-h-60 overflow-y-auto text-xs text-gray-400 font-light leading-relaxed space-y-3.5 pr-2">
               {legalType === 'privacy' ? (
                 <>
-                  <p><strong>Responsable del Tratamiento:</strong> Aura Studio Digital y los Organizadores Privados del evento "{event.title}".</p>
+                  <p><strong>Responsable del Tratamiento:</strong> Celebra Studio Digital y los Organizadores Privados del evento "{event.title}".</p>
                   <p><strong>Finalidades:</strong> Recopilamos sus datos únicamente con el fin de cuantificar y validar su asistencia, necesidades de alimentación y número de acompañantes para la planeación del evento.</p>
                   <p><strong>Datos Recabados:</strong> Nombre completo, dirección de correo electrónico, número de teléfono WhatsApp, número de acompañantes y especificaciones de notas/comentarios.</p>
                   <p><strong>Transferencias:</strong> Sus datos se almacenan de manera segura en la base de datos Supabase con protección Row Level Security y solo se comparten con el anfitrión/cliente del evento.</p>
@@ -858,7 +858,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
                   <p>Al hacer uso de este micrositio y enviar el formulario de Confirmación RSVP, usted acepta las siguientes condiciones:</p>
                   <p>1. Certifica que la información ingresada es real y corresponde a su persona.</p>
                   <p>2. Consiente que el anfitrión del evento reciba de manera inmediata su número de acompañantes y notas de servicio en su panel de administración para la organización de mesas y banquetes.</p>
-                  <p>3. Aura Studio Digital proporciona este canal interactivo de manera tecnológica, sin embargo, la logística, cancelación o reprogramación del evento es de absoluta responsabilidad de los anfitriones.</p>
+                  <p>3. Celebra Studio Digital proporciona este canal interactivo de manera tecnológica, sin embargo, la logística, cancelación o reprogramación del evento es de absoluta responsabilidad de los anfitriones.</p>
                   <p>4. No se permite la duplicación de confirmaciones con correos maliciosos.</p>
                 </>
               )}

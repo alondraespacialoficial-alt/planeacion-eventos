@@ -2467,7 +2467,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input type="checkbox" checked={evtShowBranding} onChange={(e) => setEvtShowBranding(e.target.checked)} className="mt-0.5 accent-amber-500" />
                   <span>
-                    <span className="block text-white font-medium">Mostrar marca "Aura Studio" en el micrositio</span>
+                    <span className="block text-white font-medium">Mostrar marca "Celebra Studio" en el micrositio</span>
                     <span className="block text-gray-500 text-[10px] mt-0.5">Si se desactiva, se oculta el botón de regreso a nuestra landing page. Útil para invitaciones 100% privadas donde el cliente no quiere que los invitados naveguen fuera de su invitación.</span>
                   </span>
                 </label>
