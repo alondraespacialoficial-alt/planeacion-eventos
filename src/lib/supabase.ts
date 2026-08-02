@@ -627,6 +627,23 @@ class LocalStorageDB {
   }
 }
 
+type TelegramNotifyEvent =
+  | 'lead_new'
+  | 'lead_status_changed'
+  | 'quote_new'
+  | 'quote_status_changed'
+  | 'quote_updated'
+  | 'payment_new'
+  | 'payment_status_changed';
+
+// Fire-and-forget alert to the private super admin Telegram channel (leads/quotes/payments).
+// Telegram is a monitoring add-on, never a critical dependency: it must never throw or
+// block the caller, so failures are swallowed silently here.
+function notifyTelegram(event: TelegramNotifyEvent, payload: Record<string, any>): void {
+  if (!isSupabaseConfigured || !supabase) return;
+  supabase.functions.invoke('telegram-notify', { body: { event, payload } }).catch(() => {});
+}
+
 // --- APP SERVICES WRAPPER (SUPABASE REAL + LOCAL FALLBACK) ---
 export const AppService = {
   // --- TABLE VERIFICATION & STATUS ---
@@ -1067,6 +1084,7 @@ export const AppService = {
         const payload = { ...receipt, id: 'pay-' + Math.random().toString(36).substr(2, 9), status: 'pending' as const };
         const { data, error } = await supabase.from('payment_receipts').insert([payload]).select().single();
         if (error) throw error;
+        notifyTelegram('payment_new', data as PaymentReceipt);
         return data as PaymentReceipt;
       } catch (err) {
         console.error('Error submitting payment receipt to Supabase, using local fallback', err);
@@ -1102,6 +1120,7 @@ export const AppService = {
           .select()
           .maybeSingle();
         if (error) throw error;
+        if (data && status !== 'pending') notifyTelegram('payment_status_changed', data as PaymentReceipt);
         return data as PaymentReceipt | null;
       } catch (err) {
         console.error('Error updating payment receipt status in Supabase', err);
@@ -1488,7 +1507,10 @@ export const AppService = {
     if (isSupabaseConfigured && supabase && supabaseTablesExist) {
       try {
         const { error } = await supabase.from('leads').insert([newLead]);
-        if (!error) return newLead;
+        if (!error) {
+          notifyTelegram('lead_new', newLead);
+          return newLead;
+        }
       } catch (err) {
         console.error('Error creating lead in Supabase, trying fallback...', err);
       }
@@ -1506,7 +1528,9 @@ export const AppService = {
         const { error } = await supabase.from('leads').update({ status }).eq('id', id);
         if (!error) {
           const all = await this.getLeads();
-          return all.find(l => l.id === id) || null;
+          const updated = all.find(l => l.id === id) || null;
+          if (updated) notifyTelegram('lead_status_changed', updated);
+          return updated;
         }
       } catch (err) {
         console.error('Error updating lead status in Supabase, trying fallback...', err);
@@ -1566,7 +1590,10 @@ export const AppService = {
     if (isSupabaseConfigured && supabase && supabaseTablesExist) {
       try {
         const { error } = await supabase.from('quotes').insert([newQuote]);
-        if (!error) return newQuote;
+        if (!error) {
+          notifyTelegram('quote_new', newQuote);
+          return newQuote;
+        }
       } catch (err) {
         console.error('Error creating quote in Supabase, trying fallback...', err);
       }
@@ -1584,7 +1611,15 @@ export const AppService = {
         const { error } = await supabase.from('quotes').update(updatedFields).eq('id', id);
         if (!error) {
           const quotes = await this.getQuotes(null);
-          return quotes.find(q => q.id === id) || null;
+          const updated = quotes.find(q => q.id === id) || null;
+          if (updated) {
+            if (updatedFields.status !== undefined) {
+              notifyTelegram('quote_status_changed', updated);
+            } else if (updatedFields.total !== undefined || updatedFields.items !== undefined) {
+              notifyTelegram('quote_updated', updated);
+            }
+          }
+          return updated;
         }
       } catch (err) {
         console.error('Error updating quote in Supabase, trying fallback...', err);
