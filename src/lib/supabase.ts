@@ -1450,8 +1450,13 @@ export const AppService = {
           : supabase.from('gallery_items').update(row).eq('id', finalItem.id);
         const { error } = await query;
         if (!error) return finalItem;
-      } catch (err) {
-        console.error('Error saving gallery item to Supabase, trying fallback...', err);
+        // Supabase respondió con un error explícito (tabla inexistente, RLS, columna inválida, etc.).
+        // Esto NO es una falla de red: hay que avisarle al admin en vez de guardar solo en local.
+        console.error('Error saving gallery item to Supabase:', error);
+        throw new Error(error.message || 'No se pudo guardar la producción en Supabase.');
+      } catch (err: any) {
+        if (err?.message?.includes('No se pudo guardar')) throw err;
+        console.error('Error de conexión al guardar gallery item, usando fallback local...', err);
       }
     }
 
@@ -1471,8 +1476,11 @@ export const AppService = {
       try {
         const { error } = await supabase.from('gallery_items').delete().eq('id', id);
         if (!error) return true;
-      } catch (err) {
-        console.error('Error deleting gallery item from Supabase, trying fallback...', err);
+        console.error('Error deleting gallery item from Supabase:', error);
+        throw new Error(error.message || 'No se pudo eliminar la producción en Supabase.');
+      } catch (err: any) {
+        if (err?.message?.includes('No se pudo eliminar')) throw err;
+        console.error('Error de conexión al eliminar gallery item, usando fallback local...', err);
       }
     }
     const all = LocalStorageDB.getGalleryItems();

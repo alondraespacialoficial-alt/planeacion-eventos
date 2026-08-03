@@ -974,8 +974,9 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
         showToast('Producción agregada correctamente a la galería.', 'success');
       }
       setIsGalleryFormOpen(false);
-    } catch (err) {
-      showToast('Error al guardar la producción.', 'error');
+    } catch (err: any) {
+      console.error('Error al guardar la producción:', err);
+      showToast(err?.message ? `Error al guardar: ${err.message}` : 'Error al guardar la producción.', 'error');
     }
   };
 
@@ -987,8 +988,9 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
         setGalleryItems(prev => prev.filter(g => g.id !== id));
         showToast('Producción eliminada correctamente de la galería.', 'success');
       }
-    } catch (err) {
-      showToast('Error al eliminar.', 'error');
+    } catch (err: any) {
+      console.error('Error al eliminar la producción:', err);
+      showToast(err?.message ? `Error al eliminar: ${err.message}` : 'Error al eliminar.', 'error');
     }
   };
 
