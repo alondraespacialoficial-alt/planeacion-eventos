@@ -919,15 +919,20 @@ ${extraStr}`;
               className="relative max-w-5xl w-full bg-[#0d0e12] border border-gray-800 rounded-2xl overflow-hidden shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
-              <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-black/40">
-                <div>
+              <div className="p-4 border-b border-gray-800 flex justify-between items-start gap-4 bg-black/40">
+                <div className="min-w-0">
                   <h4 className="font-serif text-base text-white font-medium">{activeGalleryItem.title}</h4>
                   <p className="text-[11px] text-gray-400 font-mono flex items-center gap-1 mt-0.5">
                     <MapPin className="w-3 h-3 shrink-0 text-amber-500" />
                     {activeGalleryItem.location}
                   </p>
+                  {activeGalleryItem.description && (
+                    <p className="text-xs text-gray-400 font-light leading-relaxed mt-2 max-w-2xl">
+                      {activeGalleryItem.description}
+                    </p>
+                  )}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 shrink-0">
                   {activeGalleryItem.media.length > 1 && (
                     <span className="text-[11px] font-mono text-gray-400">{activeMediaIndex + 1} / {activeGalleryItem.media.length}</span>
                   )}
