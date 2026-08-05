@@ -917,23 +917,35 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   };
 
   // Agrega un ítem del tabulador al carrito de cálculo (aún no toca la cotización real)
+  // Si el mismo servicio ya está en el carrito, suma la cantidad en vez de duplicar la fila
   const handleAddRateToCart = (item: RateItem) => {
     const qty = cartQuantities[item.id] ?? (item.guests_min || 1);
     if (!qty || qty <= 0) {
       showToast('Indique una cantidad válida antes de agregar.', 'error');
       return;
     }
-    setTabuladorCart(prev => [...prev, {
-      id: 'cart-' + Math.random().toString(36).substr(2, 5),
-      rateItemId: item.id,
-      description: `${item.service}${item.package_name ? ' - ' + item.package_name : ''} (${item.unit})`,
-      unitPrice: item.base_price,
-      quantity: qty
-    }]);
+    setTabuladorCart(prev => {
+      const existing = prev.find(c => c.rateItemId === item.id);
+      if (existing) {
+        return prev.map(c => c.rateItemId === item.id ? { ...c, quantity: c.quantity + qty } : c);
+      }
+      return [...prev, {
+        id: 'cart-' + Math.random().toString(36).substr(2, 5),
+        rateItemId: item.id,
+        description: `${item.service}${item.package_name ? ' - ' + item.package_name : ''} (${item.unit})`,
+        unitPrice: item.base_price,
+        quantity: qty
+      }];
+    });
   };
 
   const handleRemoveCartItem = (id: string) => {
     setTabuladorCart(prev => prev.filter(c => c.id !== id));
+  };
+
+  const handleUpdateCartQuantity = (id: string, quantity: number) => {
+    if (quantity <= 0) return;
+    setTabuladorCart(prev => prev.map(c => c.id === id ? { ...c, quantity } : c));
   };
 
   // Une el carrito calculado con el Cotizador Interno existente: se agregan como QuoteItem
@@ -1712,7 +1724,15 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                       <tr key={c.id}>
                         <td className="py-2.5 text-white font-medium">{c.description}</td>
                         <td className="py-2.5 text-right">${c.unitPrice.toLocaleString('es-MX')}</td>
-                        <td className="py-2.5 text-center">{c.quantity}</td>
+                        <td className="py-2.5 text-center">
+                          <input
+                            type="number"
+                            min={1}
+                            value={c.quantity}
+                            onChange={(e) => handleUpdateCartQuantity(c.id, parseInt(e.target.value) || 1)}
+                            className="w-14 bg-black/40 border border-gray-800 rounded p-1 text-center text-white"
+                          />
+                        </td>
                         <td className="py-2.5 text-right text-amber-400 font-bold">${(c.unitPrice * c.quantity).toLocaleString('es-MX')}</td>
                         <td className="py-2.5 text-center">
                           <button type="button" onClick={() => handleRemoveCartItem(c.id)} className="text-red-400 hover:text-red-300">✕</button>
