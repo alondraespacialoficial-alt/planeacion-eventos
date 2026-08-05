@@ -4,7 +4,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { Event, RSVP, UserSession, Service, Lead, Quote, LandingConfig, PaymentReceipt, VendorItem, UserProfile, GalleryItem } from '../types';
+import { Event, RSVP, UserSession, Service, Lead, Quote, LandingConfig, PaymentReceipt, VendorItem, UserProfile, GalleryItem, RateItem } from '../types';
 
 // Read configuration from env
 const rawSupabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
@@ -494,6 +494,52 @@ const DEFAULT_GALLERY_ITEMS: GalleryItem[] = [
   }
 ];
 
+// Tabulador real interno (precios/servicios reales del negocio, ago 2026) - solo visible/editable
+// para admin/super_admin, NUNCA público. Sirve de semilla inicial hasta que se edite desde el panel.
+const DEFAULT_RATE_CATALOG: RateItem[] = [
+  { id: 'rate-1', category: 'Alimentos', service: 'Taquiza', package_name: 'Mínimo', guests_min: 30, unit: 'Por persona', base_price: 90, includes: 'Precio por persona', notes: 'Incluye un vitrolero de agua', is_active: true },
+  { id: 'rate-2', category: 'Alimentos', service: 'Cazuelada', package_name: 'Mínimo', guests_min: 30, unit: 'Por persona', base_price: 90, includes: 'Precio por persona', notes: 'Incluye un vitrolero de agua', is_active: true },
+  { id: 'rate-3', category: 'Alimentos', service: 'Pozolada', package_name: 'Mínimo', guests_min: 30, unit: 'Por persona', base_price: 120, includes: 'Precio por persona', notes: 'Incluye un vitrolero de agua', is_active: true },
+  { id: 'rate-4', category: 'Barras y snacks', service: 'Barra de snacks Charlitrón', package_name: 'Paquete 1', guests_min: 50, guests_max: 100, unit: 'Paquete', base_price: 2150, includes: '2 hrs, 15 variedades', notes: '$43 x persona', is_active: true },
+  { id: 'rate-5', category: 'Barras y snacks', service: 'Barra de snacks Charlitrón', package_name: 'Paquete 2', guests_min: 100, guests_max: 100, unit: 'Paquete', base_price: 4150, includes: 'Definir incluye', notes: '$41.50 x persona', is_active: true },
+  { id: 'rate-6', category: 'Barras y snacks', service: 'Palomera Charlitrón', package_name: 'Ambos paquetes (extra)', guests_min: 30, guests_max: 30, unit: 'Paquete', base_price: 350, includes: 'Definir incluye', is_active: true },
+  { id: 'rate-7', category: 'Barras y snacks', service: 'Paletas de hielo Charlitrón', package_name: 'Ambos paquetes (extra)', guests_min: 50, guests_max: 100, unit: 'Paquete', base_price: 470, includes: '25 de agua y 25 de leche', notes: '10 agua 15 leche x persona', is_active: true },
+  { id: 'rate-8', category: 'Barras y snacks', service: 'Paletas de hielo Charlitrón', package_name: 'Ambos paquetes (extra)', guests_min: 100, guests_max: 100, unit: 'Paquete', base_price: 870, includes: '50 de agua y 50 de leche', notes: '10 agua 15 leche x persona', is_active: true },
+  { id: 'rate-9', category: 'Barras y snacks', service: 'Barra de Elotes Charlitrón', package_name: 'Paquete 1', guests_min: 50, guests_max: 100, unit: 'Paquete', base_price: 1750, includes: '50 vasos 8 oz, 2 hrs', notes: '$35 x persona', is_active: true },
+  { id: 'rate-10', category: 'Barras y snacks', service: 'Barra de Elotes Charlitrón', package_name: 'Paquete 2', guests_min: 100, guests_max: 100, unit: 'Paquete', base_price: 3300, includes: '100 vasos 8 oz, 2 hrs', notes: '$33 x persona', is_active: true },
+  { id: 'rate-11', category: 'Barras y snacks', service: 'Barra de Elotes Charlitrón', package_name: 'Paquete 3', guests_min: 50, guests_max: 50, unit: 'Paquete', base_price: 1750, includes: '25 vasos 8 oz, 25 maruchan o sabritas', notes: '$35 maruchan x persona', is_active: true },
+  { id: 'rate-12', category: 'Barras y snacks', service: 'Barra de Elotes Charlitrón', package_name: 'Paquete 4', guests_min: 100, guests_max: 100, unit: 'Paquete', base_price: 3500, includes: '50 vasos 8 oz, 2 hrs, maruchan o sabritas', is_active: true },
+  { id: 'rate-13', category: 'Barras y snacks', service: 'Barra de Fresas con crema', package_name: 'Único', guests_min: 40, guests_max: 100, unit: 'Paquete', base_price: 2520, notes: '$63 x persona', is_active: true },
+  { id: 'rate-14', category: 'Barras y snacks', service: 'Barra Active Bite (frutas)', package_name: 'Único', guests_min: 40, guests_max: 100, unit: 'Paquete', base_price: 2280, notes: '$57 x persona', is_active: true },
+  { id: 'rate-15', category: 'Barras y snacks', service: 'Barra de Chilaquiles', package_name: 'Único', guests_min: 40, guests_max: 100, unit: 'Paquete', base_price: 3320, notes: '$83 x persona', is_active: true },
+  { id: 'rate-16', category: 'Personal', service: 'Mesero', package_name: 'Base', unit: 'Jornada 5 horas', base_price: 600, includes: '1 mesero / 5 horas', notes: 'Escalable por evento', is_active: true },
+  { id: 'rate-17', category: 'Personal', service: 'Hostess', package_name: 'Base', unit: 'Jornada 2 horas', base_price: 700, includes: '1 hostess / 2 horas', notes: 'Escalable por evento', is_active: true },
+  { id: 'rate-18', category: 'Producción visual', service: 'Fotografía', package_name: 'Base', unit: 'Jornada 6 horas', base_price: 4000, includes: '150 fotos digitales', is_active: true },
+  { id: 'rate-19', category: 'Producción visual', service: 'Fotografía', package_name: 'Medio', unit: 'Jornada 9 horas', base_price: 5000, includes: '180 fotos digitales, cobertura de sección del evento', is_active: true },
+  { id: 'rate-20', category: 'Producción visual', service: 'Video', package_name: 'Base', unit: 'Jornada 6 horas', base_price: 5400, includes: 'Video de 50 minutos, highlights del evento 3 min aprox, entrega en USB full HD', is_active: true },
+  { id: 'rate-21', category: 'Producción visual', service: 'Video', package_name: 'Medio', unit: 'Jornada de 9 horas', base_price: 6500, includes: 'Video de 50 a 60 minutos, highlights del evento 3 min aprox, entrega en USB full HD', is_active: true },
+  { id: 'rate-22', category: 'Producción visual', service: 'Video / Drone', package_name: 'Paquete Base foto + video', unit: 'Jornada de 6 horas', base_price: 5900, includes: '150 fotos digitales, video de 50 minutos, highlights 3 min aprox, entrega USB full HD, incluye drone', is_active: true },
+  { id: 'rate-23', category: 'Producción visual', service: 'Video / Drone', package_name: 'Paquete medio foto + video', unit: 'Jornada de 9 horas', base_price: 8200, includes: '180 fotos digitales, video de 50 a 60 minutos, highlights 3 min aprox, entrega USB full HD, incluye drone y estuche de madera con el Photobook', is_active: true },
+  { id: 'rate-24', category: 'Producción visual', service: 'Photobook', package_name: 'Estuche de madera', unit: 'Estuche', base_price: 1800, includes: 'Photobook con estuche de madera', is_active: true },
+  { id: 'rate-25', category: 'Producción visual', service: 'Dron', package_name: 'Dron', unit: 'Dron', base_price: 800, includes: 'Servicio de tomas aéreas', is_active: true },
+  { id: 'rate-26', category: 'Producción visual', service: 'Hora extra local', package_name: 'Hora extra', unit: 'Hora extra', base_price: 300, includes: 'Hora extra adicional', is_active: true },
+  { id: 'rate-27', category: 'Entretenimiento', service: 'Show Charlitrón', package_name: 'Paquete Básico', unit: 'Paquete', base_price: 2100, includes: 'Personaje Charlitrón, animador, sonido', is_active: true },
+  { id: 'rate-28', category: 'Entretenimiento', service: 'Show Titeres', package_name: 'Paquete Titeres', unit: 'Paquete', base_price: 2100, includes: 'Teatrino, animador, sonido', is_active: true },
+  { id: 'rate-29', category: 'Entretenimiento', service: 'Show Charlitrón y sus titeres', package_name: 'Paquete Medio', unit: 'Paquete', base_price: 2600, includes: 'Charlitrón, animador, teatrino, sonido', is_active: true },
+  { id: 'rate-30', category: 'Digital', service: 'Invitación digital', package_name: 'Base', unit: 'Desde', base_price: 250, includes: 'Servicio base', notes: 'Escalable según diseño', is_active: true },
+  { id: 'rate-31', category: 'Restauración / enmarcado', service: 'Restauración / Enmarcado 50x76 cm', package_name: '', unit: 'Pieza', base_price: 1450, includes: 'Servicio base', is_active: true },
+  { id: 'rate-32', category: 'Restauración / enmarcado', service: 'Restauración / Enmarcado 50x60 cm', package_name: '', unit: 'Pieza', base_price: 950, includes: 'Definir medida exacta', is_active: true },
+  { id: 'rate-33', category: 'Restauración / enmarcado', service: 'Restauración / Enmarcado 40x50 cm', package_name: '', unit: 'Pieza', base_price: 800, includes: 'Definir medida exacta', is_active: true },
+  { id: 'rate-34', category: 'Restauración / enmarcado', service: 'Restauración / Enmarcado 30x40 cm', package_name: '', unit: 'Pieza', base_price: 600, includes: 'Definir medida exacta', is_active: true },
+  { id: 'rate-35', category: 'Restauración / enmarcado', service: 'Restauración / Enmarcado 29.7x42 cm', package_name: '', unit: 'Pieza', base_price: 630, includes: 'Definir medida exacta', is_active: true },
+  { id: 'rate-36', category: 'Restauración / enmarcado', service: 'Restauración / Enmarcado 24x30 cm', package_name: '', unit: 'Pieza', base_price: 470, includes: 'Definir medida exacta', is_active: true },
+  { id: 'rate-37', category: 'Restauración / enmarcado', service: 'Restauración / Enmarcado 21x29.7 cm', package_name: '', unit: 'Pieza', base_price: 370, includes: 'Definir medida exacta', is_active: true },
+  { id: 'rate-38', category: 'Restauración / enmarcado', service: 'Restauración / Enmarcado 20x25 cm', package_name: '', unit: 'Pieza', base_price: 330, includes: 'Definir medida exacta', is_active: true },
+  { id: 'rate-39', category: 'Restauración / enmarcado', service: 'Restauración / Enmarcado 15x20 cm', package_name: '', unit: 'Pieza', base_price: 270, includes: 'Definir medida exacta', is_active: true },
+  { id: 'rate-40', category: 'Restauración / enmarcado', service: 'Restauración / Enmarcado 13x18 cm', package_name: '', unit: 'Pieza', base_price: 230, includes: 'Definir medida exacta', is_active: true },
+  { id: 'rate-41', category: 'Restauración / enmarcado', service: 'Restauración / Enmarcado 10x15 cm', package_name: '', unit: 'Pieza', base_price: 170, includes: 'Definir medida exacta', is_active: true }
+];
+
 // LocalStorage database engine for seamless demo
 class LocalStorageDB {
   static getEvents(): Event[] {
@@ -533,6 +579,19 @@ class LocalStorageDB {
 
   static saveServices(services: Service[]): void {
     localStorage.setItem('services_data', JSON.stringify(services));
+  }
+
+  static getRateCatalog(): RateItem[] {
+    const data = localStorage.getItem('rate_catalog_data');
+    if (!data) {
+      localStorage.setItem('rate_catalog_data', JSON.stringify(DEFAULT_RATE_CATALOG));
+      return DEFAULT_RATE_CATALOG;
+    }
+    return JSON.parse(data);
+  }
+
+  static saveRateCatalog(items: RateItem[]): void {
+    localStorage.setItem('rate_catalog_data', JSON.stringify(items));
   }
 
   static getLeads(): Lead[] {
@@ -1398,6 +1457,72 @@ export const AppService = {
     return true;
   },
 
+  // --- TABULADOR REAL (PRECIOS/SERVICIOS INTERNOS, SOLO ADMIN/SUPER_ADMIN) ---
+  async getRateCatalog(): Promise<RateItem[]> {
+    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
+      try {
+        const { data, error } = await supabase
+          .from('rate_catalog')
+          .select('*')
+          .order('category', { ascending: true });
+        if (!error && data) return data as RateItem[];
+      } catch (err) {
+        console.error('Error fetching rate catalog from Supabase, trying fallback...', err);
+      }
+    }
+    return LocalStorageDB.getRateCatalog();
+  },
+
+  async saveRateItem(item: Omit<RateItem, 'id'> & { id?: string }): Promise<RateItem> {
+    const isNew = !item.id;
+    const finalItem: RateItem = {
+      ...item,
+      id: item.id || 'rate-' + Math.random().toString(36).substr(2, 9)
+    } as RateItem;
+
+    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
+      try {
+        const query = isNew
+          ? supabase.from('rate_catalog').insert([finalItem])
+          : supabase.from('rate_catalog').update(finalItem).eq('id', finalItem.id);
+        const { error } = await query;
+        if (!error) return finalItem;
+        console.error('Error saving rate item to Supabase:', error);
+        throw new Error(error.message || 'No se pudo guardar el ítem del tabulador en Supabase.');
+      } catch (err: any) {
+        if (err?.message?.includes('No se pudo guardar')) throw err;
+        console.error('Error de conexión al guardar rate item, usando fallback local...', err);
+      }
+    }
+
+    const all = LocalStorageDB.getRateCatalog();
+    if (isNew) {
+      all.push(finalItem);
+    } else {
+      const idx = all.findIndex(r => r.id === finalItem.id);
+      if (idx !== -1) all[idx] = finalItem;
+    }
+    LocalStorageDB.saveRateCatalog(all);
+    return finalItem;
+  },
+
+  async deleteRateItem(id: string): Promise<boolean> {
+    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
+      try {
+        const { error } = await supabase.from('rate_catalog').delete().eq('id', id);
+        if (!error) return true;
+        console.error('Error deleting rate item from Supabase:', error);
+        throw new Error(error.message || 'No se pudo eliminar el ítem del tabulador en Supabase.');
+      } catch (err: any) {
+        if (err?.message?.includes('No se pudo eliminar')) throw err;
+        console.error('Error de conexión al eliminar rate item, usando fallback local...', err);
+      }
+    }
+    const all = LocalStorageDB.getRateCatalog();
+    LocalStorageDB.saveRateCatalog(all.filter(r => r.id !== id));
+    return true;
+  },
+
   // --- GALLERY / PORTFOLIO ITEMS (SHOWCASE DE PRODUCCIONES, ADMIN-EDITABLE) ---
   async getGalleryItems(): Promise<GalleryItem[]> {
     if (isSupabaseConfigured && supabase && supabaseTablesExist) {
@@ -1870,6 +1995,24 @@ ALTER TABLE public.gallery_items DROP CONSTRAINT IF EXISTS gallery_items_categor
 ALTER TABLE public.gallery_items ADD CONSTRAINT gallery_items_category_check
     CHECK (category IN ('bodas', 'graduaciones', 'galas_xv', 'corporativos', 'infantiles'));
 
+-- 1.12. Create RATE_CATALOG Table
+-- Tabulador real interno de precios/servicios (Personal operativo que cotiza). NUNCA público -
+-- solo lectura/escritura para admin/super_admin, no tiene política de lectura pública.
+CREATE TABLE IF NOT EXISTS public.rate_catalog (
+    id TEXT PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    category TEXT NOT NULL,
+    service TEXT NOT NULL,
+    package_name TEXT DEFAULT '',
+    guests_min INTEGER,
+    guests_max INTEGER,
+    unit TEXT NOT NULL,
+    base_price NUMERIC NOT NULL,
+    includes TEXT,
+    notes TEXT,
+    is_active BOOLEAN DEFAULT true NOT NULL
+);
+
 -- ==========================================
 -- 2. Seed Initial Landing Configuration
 -- ==========================================
@@ -1956,6 +2099,7 @@ ALTER TABLE public.admin_allowlist ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_receipts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vendors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.gallery_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.rate_catalog ENABLE ROW LEVEL SECURITY;
 
 -- ==========================================
 -- 4. Create Security Policies (RLS Rules)
@@ -2107,6 +2251,17 @@ CREATE POLICY "Public read visible gallery items" ON public.gallery_items
 DROP POLICY IF EXISTS "Admins full access to gallery items" ON public.gallery_items;
 CREATE POLICY "Admins full access to gallery items" ON public.gallery_items
     FOR ALL USING (
+        public.is_admin()
+    );
+
+-- 4.12. Policies for RATE_CATALOG
+-- SIN lectura pública a propósito: es el tabulador real interno, solo lo ve el personal (admin/super_admin).
+DROP POLICY IF EXISTS "Admins full access to rate catalog" ON public.rate_catalog;
+CREATE POLICY "Admins full access to rate catalog" ON public.rate_catalog
+    FOR ALL USING (
+        public.is_admin()
+    )
+    WITH CHECK (
         public.is_admin()
     );
 

@@ -153,6 +153,21 @@ export interface Quote {
   terms: string;
 }
 
+export interface RateItem {
+  id: string;
+  created_at?: string;
+  category: string; // Alimentos, Barras y snacks, Personal, Producción visual, Entretenimiento, Digital, Restauración / enmarcado
+  service: string; // Ej. Taquiza, Fotografía, Mesero
+  package_name: string; // Subtipo/Paquete, ej. "Mínimo", "Paquete 1", "Base"
+  guests_min?: number;
+  guests_max?: number;
+  unit: string; // Por persona, Paquete, Jornada 5 horas, Pieza, etc.
+  base_price: number; // Precio base real (MXN)
+  includes?: string; // Qué incluye el servicio/paquete
+  notes?: string; // Notas internas (desgloses, aclaraciones)
+  is_active: boolean;
+}
+
 export interface LandingConfig {
   hero_title: string;
   hero_subtitle: string;

@@ -49,7 +49,7 @@ import {
   UserCog,
   Search
 } from 'lucide-react';
-import { Event, UserSession, Service, Lead, Quote, QuoteItem, LandingConfig, PaymentReceipt, UserProfile, GalleryItem } from '../types';
+import { Event, UserSession, Service, Lead, Quote, QuoteItem, LandingConfig, PaymentReceipt, UserProfile, GalleryItem, RateItem } from '../types';
 import { AppService, isSupabaseConfigured, SUPABASE_SQL_BLUEPRINT } from '../lib/supabase';
 import { generateQuotePdf } from '../lib/pdfGenerator';
 
@@ -59,11 +59,30 @@ interface AdminDashboardProps {
   onNavigate: (route: string) => void;
 }
 
+// Categorías reales del tabulador interno (tal cual el Excel/PDF de precios reales del negocio)
+const RATE_CATEGORIES = [
+  'Alimentos',
+  'Barras y snacks',
+  'Personal',
+  'Producción visual',
+  'Entretenimiento',
+  'Digital',
+  'Restauración / enmarcado'
+];
+
+interface TabuladorCartItem {
+  id: string;
+  rateItemId: string;
+  description: string;
+  unitPrice: number;
+  quantity: number;
+}
+
 export default function AdminDashboard({ currentUser, onLogout, onNavigate }: AdminDashboardProps) {
   const isSuperAdmin = currentUser.role === 'super_admin';
 
-  // Tabs State: 'cards' (Events), 'quotes', 'payments', 'leads', 'services', 'gallery', 'config', 'access'
-  const [activeTab, setActiveTab] = useState<'cards' | 'quotes' | 'payments' | 'leads' | 'services' | 'gallery' | 'config' | 'access'>(
+  // Tabs State: 'cards' (Events), 'quotes', 'tabulador', 'payments', 'leads', 'services', 'gallery', 'config', 'access'
+  const [activeTab, setActiveTab] = useState<'cards' | 'quotes' | 'tabulador' | 'payments' | 'leads' | 'services' | 'gallery' | 'config' | 'access'>(
     isSuperAdmin ? 'cards' : 'leads'
   );
 
@@ -161,6 +180,28 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   const [newItemQty, setNewItemQty] = useState(1);
   const [newItemDiscount, setNewItemDiscount] = useState(0);
 
+  // 2.1 =========================================================
+  // TABULADOR REAL (PRECIOS/SERVICIOS INTERNOS REALES, ADMIN/SUPER_ADMIN)
+  // =========================================================
+  const [rateCatalog, setRateCatalog] = useState<RateItem[]>([]);
+  const [rateSearch, setRateSearch] = useState('');
+  const [rateCategoryFilter, setRateCategoryFilter] = useState('all');
+  const [cartQuantities, setCartQuantities] = useState<Record<string, number>>({});
+  const [tabuladorCart, setTabuladorCart] = useState<TabuladorCartItem[]>([]);
+
+  const [isRateFormOpen, setIsRateFormOpen] = useState(false);
+  const [editingRateId, setEditingRateId] = useState<string | null>(null);
+  const [rtCategory, setRtCategory] = useState('');
+  const [rtService, setRtService] = useState('');
+  const [rtPackageName, setRtPackageName] = useState('');
+  const [rtGuestsMin, setRtGuestsMin] = useState<number | ''>('');
+  const [rtGuestsMax, setRtGuestsMax] = useState<number | ''>('');
+  const [rtUnit, setRtUnit] = useState('');
+  const [rtBasePrice, setRtBasePrice] = useState(0);
+  const [rtIncludes, setRtIncludes] = useState('');
+  const [rtNotes, setRtNotes] = useState('');
+  const [rtIsActive, setRtIsActive] = useState(true);
+
   // 3. =========================================================
   // MODAL / FORM STATE FOR SERVICES (ESPECIALIDADES)
   // =========================================================
@@ -213,14 +254,15 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     async function loadAllAdminData() {
       setLoading(true);
       try {
-        const [loadedEvents, loadedQuotes, loadedLeads, loadedServices, loadedConfig, loadedPayments, loadedGalleryItems] = await Promise.all([
+        const [loadedEvents, loadedQuotes, loadedLeads, loadedServices, loadedConfig, loadedPayments, loadedGalleryItems, loadedRateCatalog] = await Promise.all([
           AppService.getEvents(null), // Admin gets all events
           AppService.getQuotes(null), // Admin gets all quotes
           AppService.getLeads(),
           AppService.getServices(),
           AppService.getLandingConfig(),
           AppService.getPaymentReceipts(), // Admin gets all client receipts
-          AppService.getGalleryItems()
+          AppService.getGalleryItems(),
+          AppService.getRateCatalog()
         ]);
 
         setEvents(loadedEvents);
@@ -229,6 +271,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
         setServices(loadedServices);
         setPayments(loadedPayments || []);
         setGalleryItems(loadedGalleryItems || []);
+        setRateCatalog(loadedRateCatalog || []);
         if (loadedConfig) {
           setLandingConfig(loadedConfig);
         }
@@ -790,6 +833,131 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   };
 
   // =========================================================
+  // TABULADOR REAL CRUD HANDLERS (PRECIOS/SERVICIOS INTERNOS)
+  // =========================================================
+  const handleOpenCreateRate = () => {
+    setEditingRateId(null);
+    setRtCategory('');
+    setRtService('');
+    setRtPackageName('');
+    setRtGuestsMin('');
+    setRtGuestsMax('');
+    setRtUnit('');
+    setRtBasePrice(0);
+    setRtIncludes('');
+    setRtNotes('');
+    setRtIsActive(true);
+    setIsRateFormOpen(true);
+  };
+
+  const handleOpenEditRate = (item: RateItem) => {
+    setEditingRateId(item.id);
+    setRtCategory(item.category);
+    setRtService(item.service);
+    setRtPackageName(item.package_name || '');
+    setRtGuestsMin(item.guests_min ?? '');
+    setRtGuestsMax(item.guests_max ?? '');
+    setRtUnit(item.unit);
+    setRtBasePrice(item.base_price);
+    setRtIncludes(item.includes || '');
+    setRtNotes(item.notes || '');
+    setRtIsActive(item.is_active);
+    setIsRateFormOpen(true);
+  };
+
+  const handleSubmitRate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rtCategory || !rtService || !rtUnit || rtBasePrice <= 0) {
+      showToast('Complete categoría, servicio, unidad y un precio base mayor a cero.', 'error');
+      return;
+    }
+
+    try {
+      const payload = {
+        category: rtCategory,
+        service: rtService,
+        package_name: rtPackageName,
+        guests_min: rtGuestsMin === '' ? undefined : Number(rtGuestsMin),
+        guests_max: rtGuestsMax === '' ? undefined : Number(rtGuestsMax),
+        unit: rtUnit,
+        base_price: rtBasePrice,
+        includes: rtIncludes,
+        notes: rtNotes,
+        is_active: rtIsActive
+      };
+
+      const result = await AppService.saveRateItem(
+        editingRateId ? { ...payload, id: editingRateId } : payload
+      );
+
+      if (editingRateId) {
+        setRateCatalog(prev => prev.map(r => r.id === editingRateId ? result : r));
+        showToast('Ítem del tabulador actualizado correctamente.', 'success');
+      } else {
+        setRateCatalog(prev => [...prev, result]);
+        showToast('Ítem agregado al tabulador correctamente.', 'success');
+      }
+      setIsRateFormOpen(false);
+    } catch (err) {
+      showToast('Error al guardar el ítem del tabulador.', 'error');
+    }
+  };
+
+  const handleDeleteRate = async (id: string) => {
+    if (!window.confirm('¿Eliminar permanentemente este ítem del tabulador?')) return;
+    try {
+      const ok = await AppService.deleteRateItem(id);
+      if (ok) {
+        setRateCatalog(prev => prev.filter(r => r.id !== id));
+        showToast('Ítem eliminado del tabulador.', 'success');
+      }
+    } catch (err) {
+      showToast('Error al eliminar.', 'error');
+    }
+  };
+
+  // Agrega un ítem del tabulador al carrito de cálculo (aún no toca la cotización real)
+  const handleAddRateToCart = (item: RateItem) => {
+    const qty = cartQuantities[item.id] ?? (item.guests_min || 1);
+    if (!qty || qty <= 0) {
+      showToast('Indique una cantidad válida antes de agregar.', 'error');
+      return;
+    }
+    setTabuladorCart(prev => [...prev, {
+      id: 'cart-' + Math.random().toString(36).substr(2, 5),
+      rateItemId: item.id,
+      description: `${item.service}${item.package_name ? ' - ' + item.package_name : ''} (${item.unit})`,
+      unitPrice: item.base_price,
+      quantity: qty
+    }]);
+  };
+
+  const handleRemoveCartItem = (id: string) => {
+    setTabuladorCart(prev => prev.filter(c => c.id !== id));
+  };
+
+  // Une el carrito calculado con el Cotizador Interno existente: se agregan como QuoteItem
+  // normales, sin tocar la lógica/formato del cotizador manual (PDF, WhatsApp, guardado, etc.)
+  const handleSendCartToQuote = () => {
+    if (tabuladorCart.length === 0) {
+      showToast('Agregue al menos un servicio del tabulador al carrito.', 'error');
+      return;
+    }
+    const newItems: QuoteItem[] = tabuladorCart.map(c => ({
+      id: 'itm-' + Math.random().toString(36).substr(2, 5),
+      description: c.description,
+      price: c.unitPrice,
+      quantity: c.quantity,
+      discount: 0
+    }));
+    setQuoteItems(prev => [...prev, ...newItems]);
+    setTabuladorCart([]);
+    setActiveTab('quotes');
+    setIsQuoteFormOpen(true);
+    showToast('Servicios del tabulador agregados a la cotización. Complete los datos del cliente.', 'success');
+  };
+
+  // =========================================================
   // LEADS ACTIONS & AUTOMATED PREFILL TO CONVERT TO QUOTE
   // =========================================================
   const handleLeadStatusChange = async (id: string, nextStatus: Lead['status']) => {
@@ -1036,6 +1204,20 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     );
   });
 
+  // Buscador/filtro del Tabulador Real: por texto (servicio/paquete) y por categoría
+  const filteredRateCatalog = rateCatalog.filter(item => {
+    if (rateCategoryFilter !== 'all' && item.category !== rateCategoryFilter) return false;
+    const query = rateSearch.trim().toLowerCase();
+    if (!query) return true;
+    return (
+      item.service.toLowerCase().includes(query) ||
+      item.category.toLowerCase().includes(query) ||
+      (item.package_name || '').toLowerCase().includes(query)
+    );
+  });
+
+  const tabuladorCartTotal = tabuladorCart.reduce((sum, c) => sum + (c.unitPrice * c.quantity), 0);
+
   return (
     <div className="min-h-screen bg-[#07080a] text-gray-200 font-sans pb-16 selection:bg-amber-400 selection:text-black">
       
@@ -1096,6 +1278,13 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
           >
             <DollarSign className="w-3.5 h-3.5" />
             Cotizador Interno ({quotes.length})
+          </button>
+          <button 
+            onClick={() => setActiveTab('tabulador')}
+            className={`pb-1 border-b-2 transition-all flex items-center gap-1.5 ${activeTab === 'tabulador' ? 'border-amber-500 text-amber-500' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            Tabulador Real ({rateCatalog.length})
           </button>
           <button 
             onClick={() => setActiveTab('payments')}
@@ -1396,6 +1585,157 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: TABULADOR REAL (PRECIOS/SERVICIOS INTERNOS, NUNCA PÚBLICO) */}
+        {activeTab === 'tabulador' && (
+          <div className="space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-serif text-2xl text-white">Tabulador Real (Interno)</h3>
+                <p className="text-xs text-gray-500">Precios y servicios reales del negocio, uso exclusivo del equipo para armar cotizaciones exactas. No es visible para clientes ni en la landing pública.</p>
+              </div>
+              <button 
+                onClick={handleOpenCreateRate}
+                className="px-5 py-3 rounded-full bg-amber-500 hover:bg-amber-400 text-black font-mono text-xs font-bold tracking-widest flex items-center gap-1.5"
+              >
+                <Plus className="w-4 h-4" />
+                NUEVO ÍTEM
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-3 items-center">
+              <div className="relative flex-1 min-w-[220px]">
+                <Search className="w-3.5 h-3.5 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input 
+                  value={rateSearch} 
+                  onChange={(e) => setRateSearch(e.target.value)} 
+                  placeholder="Buscar servicio o paquete..." 
+                  className="w-full bg-black/40 border border-gray-800 rounded-lg pl-8 pr-3 py-2 text-xs text-white focus:border-amber-500 outline-none" 
+                />
+              </div>
+              <select 
+                value={rateCategoryFilter} 
+                onChange={(e) => setRateCategoryFilter(e.target.value)} 
+                className="bg-black/40 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none"
+              >
+                <option value="all">Todas las categorías</option>
+                {RATE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            <div className="bg-[#0d0e12] border border-gray-800 rounded-xl overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-black/40 border-b border-gray-800 text-[10px] font-mono text-gray-500 uppercase">
+                    <th className="py-4 px-4">Categoría / Servicio</th>
+                    <th className="py-4 px-4">Paquete</th>
+                    <th className="py-4 px-4">Personas</th>
+                    <th className="py-4 px-4">Unidad</th>
+                    <th className="py-4 px-4 text-right">Precio Base</th>
+                    <th className="py-4 px-4 text-center">Cant.</th>
+                    <th className="py-4 px-4 text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800/40">
+                  {filteredRateCatalog.map(item => (
+                    <tr key={item.id} className={`hover:bg-black/20 ${!item.is_active ? 'opacity-40' : ''}`}>
+                      <td className="py-3 px-4">
+                        <p className="text-[9px] font-mono text-amber-500 uppercase tracking-wide">{item.category}</p>
+                        <p className="text-white font-medium">{item.service}</p>
+                      </td>
+                      <td className="py-3 px-4 text-gray-400">{item.package_name || '—'}</td>
+                      <td className="py-3 px-4 text-gray-400 font-mono">
+                        {item.guests_min ? `${item.guests_min}${item.guests_max ? '-' + item.guests_max : '+'}` : '—'}
+                      </td>
+                      <td className="py-3 px-4 text-gray-400">{item.unit}</td>
+                      <td className="py-3 px-4 text-right font-mono font-bold text-amber-400">${item.base_price.toLocaleString('es-MX')}</td>
+                      <td className="py-3 px-4 text-center">
+                        <input 
+                          type="number" 
+                          min={1}
+                          defaultValue={cartQuantities[item.id] ?? (item.guests_min || 1)}
+                          onChange={(e) => setCartQuantities(prev => ({ ...prev, [item.id]: parseInt(e.target.value) || 1 }))}
+                          className="w-16 bg-black/40 border border-gray-800 rounded p-1.5 text-center text-white"
+                        />
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex justify-center gap-1.5">
+                          <button 
+                            onClick={() => handleAddRateToCart(item)}
+                            title="Agregar al carrito de cálculo"
+                            className="p-1.5 rounded bg-amber-500/10 hover:bg-amber-500 border border-amber-500/20 text-amber-500 hover:text-black transition-all"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => handleOpenEditRate(item)}
+                            className="p-1.5 rounded bg-gray-800/60 hover:bg-gray-700 text-gray-300 transition-all"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteRate(item.id)}
+                            className="p-1.5 rounded bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white transition-all"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filteredRateCatalog.length === 0 && (
+                <p className="text-gray-500 italic text-[10px] text-center py-6">No hay ítems que coincidan con la búsqueda/filtro.</p>
+              )}
+            </div>
+
+            {/* Carrito de cálculo → se une al Cotizador Interno existente */}
+            <div className="bg-[#0d0e12] border border-amber-500/20 rounded-xl p-5 space-y-3">
+              <h4 className="font-mono text-amber-500 text-[10px] uppercase font-bold">Carrito de Cálculo → Cotizador Interno</h4>
+              {tabuladorCart.length > 0 ? (
+                <table className="w-full border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-gray-800 text-gray-500 text-[9px] uppercase font-mono text-left">
+                      <th className="pb-2">Servicio</th>
+                      <th className="pb-2 text-right">Precio Unit.</th>
+                      <th className="pb-2 text-center">Cant.</th>
+                      <th className="pb-2 text-right">Total</th>
+                      <th className="pb-2 text-center">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-800/40 font-mono text-[11px]">
+                    {tabuladorCart.map(c => (
+                      <tr key={c.id}>
+                        <td className="py-2.5 text-white font-medium">{c.description}</td>
+                        <td className="py-2.5 text-right">${c.unitPrice.toLocaleString('es-MX')}</td>
+                        <td className="py-2.5 text-center">{c.quantity}</td>
+                        <td className="py-2.5 text-right text-amber-400 font-bold">${(c.unitPrice * c.quantity).toLocaleString('es-MX')}</td>
+                        <td className="py-2.5 text-center">
+                          <button type="button" onClick={() => handleRemoveCartItem(c.id)} className="text-red-400 hover:text-red-300">✕</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-gray-500 italic text-[10px] text-center py-3">Agregue servicios de la tabla de arriba para calcular el total.</p>
+              )}
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-3 border-t border-gray-800">
+                <p className="font-mono text-xs text-gray-400">
+                  Subtotal carrito: <span className="text-amber-400 font-bold">${tabuladorCartTotal.toLocaleString('es-MX')}</span>
+                </p>
+                <button 
+                  onClick={handleSendCartToQuote}
+                  className="px-5 py-2.5 rounded-full bg-amber-500 hover:bg-amber-400 text-black font-mono text-xs font-bold tracking-widest flex items-center gap-1.5"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                  ENVIAR AL COTIZADOR
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -2601,6 +2941,82 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
               <div className="flex justify-end gap-2 pt-4">
                 <button type="button" onClick={() => setIsQuoteFormOpen(false)} className="px-4 py-2 border border-gray-800 rounded hover:bg-gray-800 text-gray-400">Cancelar</button>
                 <button type="submit" className="px-5 py-2 bg-amber-500 text-black font-mono font-bold rounded">Guardar Cotización</button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* =========================================================
+          RATE ITEM (TABULADOR REAL) MODAL OVERLAY
+          ========================================================= */}
+      {isRateFormOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-xl rounded-2xl border border-gray-800 bg-[#0e1014] p-8 max-h-[90vh] overflow-y-auto space-y-6">
+            <div className="flex justify-between items-center border-b border-gray-800 pb-4">
+              <h4 className="font-serif text-xl text-amber-500 font-medium">{editingRateId ? 'Editar Ítem del Tabulador' : 'Nuevo Ítem del Tabulador'}</h4>
+              <button onClick={() => setIsRateFormOpen(false)} className="text-gray-500 hover:text-white">✕</button>
+            </div>
+
+            <form onSubmit={handleSubmitRate} className="space-y-5 text-xs">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-mono text-gray-400 mb-1">CATEGORÍA *</label>
+                  <input list="rate-categories" required value={rtCategory} onChange={(e) => setRtCategory(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" placeholder="Ej. Alimentos" />
+                  <datalist id="rate-categories">
+                    {RATE_CATEGORIES.map(c => <option key={c} value={c} />)}
+                  </datalist>
+                </div>
+                <div>
+                  <label className="block font-mono text-gray-400 mb-1">SERVICIO *</label>
+                  <input required value={rtService} onChange={(e) => setRtService(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" placeholder="Ej. Taquiza" />
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-mono text-gray-400 mb-1">SUBTIPO / PAQUETE</label>
+                  <input value={rtPackageName} onChange={(e) => setRtPackageName(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" placeholder="Ej. Paquete 1, Mínimo, Base" />
+                </div>
+                <div>
+                  <label className="block font-mono text-gray-400 mb-1">UNIDAD *</label>
+                  <input required value={rtUnit} onChange={(e) => setRtUnit(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" placeholder="Ej. Por persona, Paquete, Pieza" />
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block font-mono text-gray-400 mb-1">PERSONAS MÍN.</label>
+                  <input type="number" min={0} value={rtGuestsMin} onChange={(e) => setRtGuestsMin(e.target.value === '' ? '' : parseInt(e.target.value))} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" />
+                </div>
+                <div>
+                  <label className="block font-mono text-gray-400 mb-1">PERSONAS MÁX.</label>
+                  <input type="number" min={0} value={rtGuestsMax} onChange={(e) => setRtGuestsMax(e.target.value === '' ? '' : parseInt(e.target.value))} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" />
+                </div>
+                <div>
+                  <label className="block font-mono text-gray-400 mb-1">PRECIO BASE (MXN) *</label>
+                  <input type="number" required min={0} value={rtBasePrice} onChange={(e) => setRtBasePrice(parseFloat(e.target.value) || 0)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-mono text-gray-400 mb-1">INCLUYE</label>
+                <textarea rows={2} value={rtIncludes} onChange={(e) => setRtIncludes(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white resize-none" placeholder="Qué incluye este servicio/paquete" />
+              </div>
+
+              <div>
+                <label className="block font-mono text-gray-400 mb-1">NOTAS INTERNAS</label>
+                <textarea rows={2} value={rtNotes} onChange={(e) => setRtNotes(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white resize-none" placeholder="Desgloses, aclaraciones para el equipo" />
+              </div>
+
+              <label className="flex items-center gap-2 text-gray-400">
+                <input type="checkbox" checked={rtIsActive} onChange={(e) => setRtIsActive(e.target.checked)} className="accent-amber-500" />
+                Ítem activo (disponible para agregar a cotizaciones)
+              </label>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <button type="button" onClick={() => setIsRateFormOpen(false)} className="px-4 py-2 border border-gray-800 rounded hover:bg-gray-800 text-gray-400">Cancelar</button>
+                <button type="submit" className="px-5 py-2 bg-amber-500 text-black font-mono font-bold rounded">Guardar Ítem</button>
               </div>
             </form>
           </motion.div>
