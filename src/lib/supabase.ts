@@ -1903,6 +1903,10 @@ CREATE TABLE IF NOT EXISTS public.quotes (
     items JSONB DEFAULT '[]'::JSONB NOT NULL,
     subtotal NUMERIC DEFAULT 0 NOT NULL,
     discount_total NUMERIC DEFAULT 0 NOT NULL,
+    apply_iva BOOLEAN DEFAULT false,
+    iva_total NUMERIC DEFAULT 0,
+    discount_percent NUMERIC DEFAULT 0,
+    percent_discount_total NUMERIC DEFAULT 0,
     total NUMERIC DEFAULT 0 NOT NULL,
     status TEXT CHECK (status IN ('draft', 'sent', 'approved', 'cancelled')) DEFAULT 'draft' NOT NULL,
     observations TEXT,
@@ -2087,6 +2091,11 @@ ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS gift_registry JSONB DEFAULT 
 ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS itinerary JSONB DEFAULT '[]';
 ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS restrictions_note TEXT;
 ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS guests_count INTEGER;
+-- Compatibilidad: agrega columnas de IVA/descuento % a instalaciones existentes de quotes
+ALTER TABLE public.quotes ADD COLUMN IF NOT EXISTS apply_iva BOOLEAN DEFAULT false;
+ALTER TABLE public.quotes ADD COLUMN IF NOT EXISTS iva_total NUMERIC DEFAULT 0;
+ALTER TABLE public.quotes ADD COLUMN IF NOT EXISTS discount_percent NUMERIC DEFAULT 0;
+ALTER TABLE public.quotes ADD COLUMN IF NOT EXISTS percent_discount_total NUMERIC DEFAULT 0;
 
 ALTER TABLE public.eventos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rsvps ENABLE ROW LEVEL SECURITY;

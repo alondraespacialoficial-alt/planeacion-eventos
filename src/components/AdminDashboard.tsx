@@ -180,6 +180,11 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   const [newItemQty, setNewItemQty] = useState(1);
   const [newItemDiscount, setNewItemDiscount] = useState(0);
 
+  // IVA 16% y descuento global en % (ambos opcionales, activables con un toggle)
+  const [quoteApplyIva, setQuoteApplyIva] = useState(false);
+  const [quoteApplyDiscountPercent, setQuoteApplyDiscountPercent] = useState(false);
+  const [quoteDiscountPercent, setQuoteDiscountPercent] = useState(0);
+
   // 2.1 =========================================================
   // TABULADOR REAL (PRECIOS/SERVICIOS INTERNOS REALES, ADMIN/SUPER_ADMIN)
   // =========================================================
@@ -701,6 +706,9 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     setNewItemPrice(0);
     setNewItemQty(1);
     setNewItemDiscount(0);
+    setQuoteApplyIva(false);
+    setQuoteApplyDiscountPercent(false);
+    setQuoteDiscountPercent(0);
     setIsQuoteFormOpen(true);
   };
 
@@ -713,6 +721,9 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     setQuoteObservations(q.observations || '');
     setQuoteTerms(q.terms || '');
     setQuoteItems([...q.items]);
+    setQuoteApplyIva(q.apply_iva || false);
+    setQuoteApplyDiscountPercent((q.discount_percent || 0) > 0);
+    setQuoteDiscountPercent(q.discount_percent || 0);
     setIsQuoteFormOpen(true);
   };
 
@@ -747,6 +758,15 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     setQuoteItems(prev => prev.filter(it => it.id !== itemId));
   };
 
+  // Totales en vivo del formulario: subtotal/descuento por ítem -> descuento % opcional -> IVA 16% opcional
+  const quoteItemsSubtotal = quoteItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const quoteItemsDiscountTotal = quoteItems.reduce((sum, item) => sum + item.discount, 0);
+  const quoteAfterItemsDiscount = quoteItemsSubtotal - quoteItemsDiscountTotal;
+  const quotePercentDiscountAmount = quoteApplyDiscountPercent ? quoteAfterItemsDiscount * (quoteDiscountPercent / 100) : 0;
+  const quoteBaseForIva = quoteAfterItemsDiscount - quotePercentDiscountAmount;
+  const quoteIvaAmount = quoteApplyIva ? quoteBaseForIva * 0.16 : 0;
+  const quoteGrandTotal = quoteBaseForIva + quoteIvaAmount;
+
   const handleSubmitQuote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!quoteClientName || !quoteClientEmail || quoteItems.length === 0) {
@@ -754,20 +774,19 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
       return;
     }
 
-    // Perform live sum totals
-    const subtotal = quoteItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const discount_total = quoteItems.reduce((sum, item) => sum + item.discount, 0);
-    const total = subtotal - discount_total;
-
     const payload = {
       client_id: 'cli-' + Math.random().toString(36).substr(2, 5),
       client_name: quoteClientName,
       client_email: quoteClientEmail.trim().toLowerCase(),
       client_phone: quoteClientPhone,
       items: quoteItems,
-      subtotal,
-      discount_total,
-      total,
+      subtotal: quoteItemsSubtotal,
+      discount_total: quoteItemsDiscountTotal,
+      apply_iva: quoteApplyIva,
+      iva_total: quoteIvaAmount,
+      discount_percent: quoteApplyDiscountPercent ? quoteDiscountPercent : 0,
+      percent_discount_total: quotePercentDiscountAmount,
+      total: quoteGrandTotal,
       status: quoteStatus,
       observations: quoteObservations,
       terms: quoteTerms
@@ -805,6 +824,10 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
         items: q.items.map(it => ({ ...it, id: 'itm-' + Math.random().toString(36).substr(2, 5) })),
         subtotal: q.subtotal,
         discount_total: q.discount_total,
+        apply_iva: q.apply_iva || false,
+        iva_total: q.iva_total || 0,
+        discount_percent: q.discount_percent || 0,
+        percent_discount_total: q.percent_discount_total || 0,
         total: q.total,
         status: 'draft' as const, // resets to draft for safety
         observations: q.observations,
@@ -1562,6 +1585,10 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                               items: q.items.map(i => ({ description: i.description, price: i.price, quantity: i.quantity, discount: i.discount })),
                               subtotal: q.subtotal,
                               discountTotal: q.discount_total,
+                              applyIva: q.apply_iva,
+                              ivaTotal: q.iva_total,
+                              discountPercent: q.discount_percent,
+                              percentDiscountTotal: q.percent_discount_total,
                               total: q.total,
                               observations: q.notes,
                               whatsappPhone: landingConfig.whatsapp_phone,
@@ -2944,6 +2971,70 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                     <button type="button" onClick={handleAddQuoteItem} className="w-full py-2 rounded bg-amber-500/10 border border-amber-500/30 text-amber-500 hover:bg-amber-500 hover:text-black font-mono font-bold transition-all uppercase">
                       + AGREGAR
                     </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* IVA 16% y descuento global en %, ambos opcionales/activables */}
+              <div className="space-y-3 bg-black/20 p-4 rounded-xl border border-gray-800/80">
+                <h5 className="font-mono text-amber-500 text-[10px] uppercase font-bold">AJUSTES DE TOTAL (OPCIONALES):</h5>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setQuoteApplyIva(v => !v)}
+                    className={`px-4 py-2 rounded-full text-[10px] font-mono font-bold uppercase tracking-wide border transition-all ${quoteApplyIva ? 'bg-amber-500 border-amber-500 text-black' : 'bg-black/40 border-gray-800 text-gray-400 hover:border-amber-500/50'}`}
+                  >
+                    IVA 16% {quoteApplyIva ? '· ACTIVADO' : '· DESACTIVADO'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQuoteApplyDiscountPercent(v => !v)}
+                    className={`px-4 py-2 rounded-full text-[10px] font-mono font-bold uppercase tracking-wide border transition-all ${quoteApplyDiscountPercent ? 'bg-amber-500 border-amber-500 text-black' : 'bg-black/40 border-gray-800 text-gray-400 hover:border-amber-500/50'}`}
+                  >
+                    DESCUENTO % {quoteApplyDiscountPercent ? '· ACTIVADO' : '· DESACTIVADO'}
+                  </button>
+                  {quoteApplyDiscountPercent && (
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={quoteDiscountPercent}
+                        onChange={(e) => setQuoteDiscountPercent(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                        className="w-16 bg-black/40 border border-gray-800 rounded p-1.5 text-center text-white"
+                      />
+                      <span className="text-gray-500 text-xs">%</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Resumen de totales en vivo */}
+                <div className="ml-auto max-w-xs bg-black/30 border border-gray-800 rounded-lg p-4 space-y-1.5 font-mono text-[11px]">
+                  <div className="flex justify-between text-gray-400">
+                    <span>Subtotal:</span>
+                    <span>${quoteItemsSubtotal.toLocaleString('es-MX')}</span>
+                  </div>
+                  {quoteItemsDiscountTotal > 0 && (
+                    <div className="flex justify-between text-red-400">
+                      <span>Descuento por ítem:</span>
+                      <span>-${quoteItemsDiscountTotal.toLocaleString('es-MX')}</span>
+                    </div>
+                  )}
+                  {quoteApplyDiscountPercent && (
+                    <div className="flex justify-between text-red-400">
+                      <span>Descuento {quoteDiscountPercent}%:</span>
+                      <span>-${quotePercentDiscountAmount.toLocaleString('es-MX')}</span>
+                    </div>
+                  )}
+                  {quoteApplyIva && (
+                    <div className="flex justify-between text-gray-300">
+                      <span>IVA 16%:</span>
+                      <span>+${quoteIvaAmount.toLocaleString('es-MX')}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-amber-400 font-bold text-sm pt-1.5 border-t border-gray-800">
+                    <span>TOTAL:</span>
+                    <span>${quoteGrandTotal.toLocaleString('es-MX')}</span>
                   </div>
                 </div>
               </div>

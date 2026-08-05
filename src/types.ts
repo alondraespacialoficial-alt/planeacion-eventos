@@ -147,6 +147,10 @@ export interface Quote {
   items: QuoteItem[];
   subtotal: number;
   discount_total: number;
+  apply_iva?: boolean; // IVA 16% opcional, activable desde el formulario
+  iva_total?: number;
+  discount_percent?: number; // descuento global opcional en %, 0 = desactivado
+  percent_discount_total?: number;
   total: number;
   status: 'draft' | 'sent' | 'approved' | 'cancelled';
   observations: string;

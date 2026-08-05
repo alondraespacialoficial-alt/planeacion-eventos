@@ -18,6 +18,10 @@ export interface QuotePdfData {
   }>;
   subtotal: number;
   discountTotal: number;
+  applyIva?: boolean;
+  ivaTotal?: number;
+  discountPercent?: number;
+  percentDiscountTotal?: number;
   total: number;
   observations?: string;
   terms?: string;
@@ -185,10 +189,14 @@ export function generateQuotePdf(data: QuotePdfData): void {
   // Totals Box Right Aligned
   const totalsX = margin + contentWidth - 75;
   const totalsWidth = 75;
+  const hasPercentDiscount = !!(data.percentDiscountTotal && data.percentDiscountTotal > 0);
+  const hasIva = !!(data.applyIva && data.ivaTotal && data.ivaTotal > 0);
+  const extraLines = (hasPercentDiscount ? 1 : 0) + (hasIva ? 1 : 0);
+  const totalsHeight = 24 + extraLines * 5;
 
   doc.setFillColor(bgLight[0], bgLight[1], bgLight[2]);
   doc.setDrawColor(220, 220, 220);
-  doc.roundedRect(totalsX, y, totalsWidth, 24, 1.5, 1.5, 'FD');
+  doc.roundedRect(totalsX, y, totalsWidth, totalsHeight, 1.5, 1.5, 'FD');
 
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
@@ -196,21 +204,36 @@ export function generateQuotePdf(data: QuotePdfData): void {
   doc.text('Subtotal:', totalsX + 4, y + 6);
   doc.text(`$${(data.subtotal || data.total).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, totalsX + totalsWidth - 4, y + 6, { align: 'right' });
 
+  let lineY = y + 11;
+
   if (data.discountTotal && data.discountTotal > 0) {
-    doc.text('Descuento:', totalsX + 4, y + 11);
-    doc.text(`-$${data.discountTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, totalsX + totalsWidth - 4, y + 11, { align: 'right' });
+    doc.text('Descuento:', totalsX + 4, lineY);
+    doc.text(`-$${data.discountTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, totalsX + totalsWidth - 4, lineY, { align: 'right' });
+    lineY += 5;
+  }
+
+  if (hasPercentDiscount) {
+    doc.text(`Descuento ${data.discountPercent}%:`, totalsX + 4, lineY);
+    doc.text(`-$${(data.percentDiscountTotal || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, totalsX + totalsWidth - 4, lineY, { align: 'right' });
+    lineY += 5;
+  }
+
+  if (hasIva) {
+    doc.text('IVA 16%:', totalsX + 4, lineY);
+    doc.text(`+$${(data.ivaTotal || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, totalsX + totalsWidth - 4, lineY, { align: 'right' });
+    lineY += 5;
   }
 
   doc.setDrawColor(200, 200, 200);
-  doc.line(totalsX + 4, y + 15, totalsX + totalsWidth - 4, y + 15);
+  doc.line(totalsX + 4, y + totalsHeight - 9, totalsX + totalsWidth - 4, y + totalsHeight - 9);
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(goldPrimary[0], goldPrimary[1], goldPrimary[2]);
-  doc.text('TOTAL:', totalsX + 4, y + 21);
-  doc.text(`$${data.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN`, totalsX + totalsWidth - 4, y + 21, { align: 'right' });
+  doc.text('TOTAL:', totalsX + 4, y + totalsHeight - 3);
+  doc.text(`$${data.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN`, totalsX + totalsWidth - 4, y + totalsHeight - 3, { align: 'right' });
 
-  y += 32;
+  y += totalsHeight + 8;
 
   // Terms and Conditions / Notes Box
   doc.setFillColor(250, 250, 250);
