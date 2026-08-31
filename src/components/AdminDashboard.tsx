@@ -443,8 +443,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
       showToast('Por favor complete todos los campos obligatorios del evento.', 'error');
       return;
     }
-    if (/spotify\.com|youtube\.com|youtu\.be/i.test(evtMusicUrl)) {
-      showToast('El audio de fondo no puede ser un link de Spotify/YouTube (no se puede reproducir directo). Sube un archivo .mp3 o pega un enlace directo terminado en .mp3.', 'error');
+    if (/youtube\.com|youtu\.be/i.test(evtMusicUrl)) {
+      showToast('El audio de fondo no puede ser un link de YouTube (no se puede reproducir directo). Sube un archivo .mp3, pega un enlace directo terminado en .mp3, o usa un link de Spotify.', 'error');
       return;
     }
 
@@ -2799,9 +2799,9 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
               </div>
 
               <div>
-                <label className="block font-mono text-gray-400 mb-1">AUDIO DE FONDO (OPCIONAL)</label>
-                <input type="text" value={evtMusicUrl} onChange={(e) => setEvtMusicUrl(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white mb-2" placeholder="Enlace directo .mp3 o suba abajo" />
-                <p className="text-[10px] text-amber-500/80 mb-2">⚠ No uses links de Spotify/YouTube: no se pueden reproducir directo (son streaming protegido). Sube un archivo .mp3 abajo o pega un enlace directo que termine en .mp3.</p>
+                <label className="block font-mono text-gray-400 mb-1">AUDIO DE FONDO (MP3 DIRECTO / SPOTIFY, OPCIONAL)</label>
+                <input type="text" value={evtMusicUrl} onChange={(e) => setEvtMusicUrl(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white mb-2" placeholder="Enlace directo .mp3, link de Spotify, o suba abajo" />
+                <p className="text-[10px] text-gray-500 mb-2">* Usa un link directo a un .mp3, un link de Spotify (canción o álbum), o sube tu propio archivo. Los links de YouTube no son compatibles.</p>
                 <div className="border border-dashed border-gray-800 rounded-lg p-4 bg-black/20 text-center relative cursor-pointer">
                   <input type="file" onChange={handleMusicFileChange} accept="audio/*" className="absolute inset-0 opacity-0 cursor-pointer" />
                   {uploadingMusic ? <p className="text-amber-500">Subiendo audio...</p> : <p className="text-gray-500">Arrastre o seleccione un archivo de audio (mp3) para almacenar en Supabase Storage</p>}

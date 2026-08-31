@@ -33,6 +33,14 @@ import {
 import { Event, RSVP } from '../types';
 import { AppService } from '../lib/supabase';
 
+// Convierte un link normal de Spotify (track/album/playlist/episode) en la URL de su reproductor embebible oficial.
+// Spotify no expone un archivo de audio directo, por eso un <audio src> no funciona con estos links.
+function getSpotifyEmbedUrl(url: string): string | null {
+  const match = url.match(/open\.spotify\.com\/(?:intl-\w+\/)?(track|album|playlist|episode|show)\/([a-zA-Z0-9]+)/);
+  if (!match) return null;
+  return `https://open.spotify.com/embed/${match[1]}/${match[2]}?utm_source=generator&theme=0`;
+}
+
 interface MicrositePageProps {
   eventId: string;
   onNavigate: (route: string) => void;
@@ -67,6 +75,8 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
   // Legal terms expansion
   const [showLegalDialog, setShowLegalDialog] = useState<boolean>(false);
   const [legalType, setLegalType] = useState<'privacy' | 'terms'>('privacy');
+
+  const spotifyEmbedUrl = event?.music_url ? getSpotifyEmbedUrl(event.music_url) : null;
 
   useEffect(() => {
     async function loadEvent() {
@@ -204,7 +214,21 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
 
   return (
     <div className="min-h-screen bg-[#08090b] text-gray-200 font-sans relative selection:bg-amber-400 selection:text-black pb-20">
-      
+
+      {spotifyEmbedUrl && (
+        <div className="fixed bottom-4 right-4 z-40 w-[300px] max-w-[90vw] rounded-xl overflow-hidden shadow-2xl shadow-black/60">
+          <iframe
+            src={spotifyEmbedUrl}
+            width="100%"
+            height="80"
+            style={{ border: 0 }}
+            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+            loading="lazy"
+            title="Reproductor de Spotify"
+          />
+        </div>
+      )}
+
       {/* Dynamic Cover Asset (Image or Video) */}
       <section className="h-screen w-full relative flex items-center justify-center overflow-hidden">
         {event.cover_type === 'video' ? (
@@ -246,7 +270,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
         )}
 
         <div className="absolute top-6 right-6 z-30 flex items-center gap-2">
-          {event.music_url && (
+          {event.music_url && !spotifyEmbedUrl && (
             <>
               <audio ref={audioRef} src={event.music_url} loop preload="none" />
               <button 
