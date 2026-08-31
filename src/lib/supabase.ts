@@ -967,10 +967,14 @@ export const AppService = {
           .insert([newEvent])
           .select()
           .single();
-        if (error) throw error;
-        return data as Event;
-      } catch (err) {
-        console.error('Error creating event in Supabase, trying fallback...', err);
+        if (!error) return data as Event;
+        // Error explícito de Supabase (RLS, columna faltante, etc.) - no es de conexión.
+        // Hay que avisarle al admin en vez de guardar solo en local (produciría un id "undefined" en el link).
+        console.error('Error creating event in Supabase:', error);
+        throw new Error(error.message || 'No se pudo guardar la invitación en Supabase.');
+      } catch (err: any) {
+        if (err?.message?.includes('No se pudo guardar')) throw err;
+        console.error('Error de conexión al crear evento, usando fallback local...', err);
       }
     }
 
@@ -990,10 +994,12 @@ export const AppService = {
           .eq('id', id)
           .select()
           .single();
-        if (error) throw error;
-        return data as Event;
-      } catch (err) {
-        console.error('Error updating event in Supabase, trying fallback...', err);
+        if (!error) return data as Event;
+        console.error('Error updating event in Supabase:', error);
+        throw new Error(error.message || 'No se pudo actualizar la invitación en Supabase.');
+      } catch (err: any) {
+        if (err?.message?.includes('No se pudo actualizar')) throw err;
+        console.error('Error de conexión al actualizar evento, usando fallback local...', err);
       }
     }
 
@@ -1015,10 +1021,12 @@ export const AppService = {
           .from('eventos')
           .delete()
           .eq('id', id);
-        if (error) throw error;
-        return true;
-      } catch (err) {
-        console.error('Error deleting event in Supabase, trying fallback...', err);
+        if (!error) return true;
+        console.error('Error deleting event in Supabase:', error);
+        throw new Error(error.message || 'No se pudo eliminar la invitación en Supabase.');
+      } catch (err: any) {
+        if (err?.message?.includes('No se pudo eliminar')) throw err;
+        console.error('Error de conexión al eliminar evento, usando fallback local...', err);
       }
     }
 
@@ -1375,15 +1383,19 @@ export const AppService = {
           .from('event-assets')
           .upload(filePath, finalFile);
 
-        if (uploadError) throw uploadError;
-
-        const { data } = supabase.storage
-          .from('event-assets')
-          .getPublicUrl(filePath);
-
-        return data.publicUrl;
-      } catch (err) {
-        console.error('Error uploading to Supabase Storage, falling back to base64...', err);
+        if (!uploadError) {
+          const { data } = supabase.storage
+            .from('event-assets')
+            .getPublicUrl(filePath);
+          return data.publicUrl;
+        }
+        // Error explícito de Storage (RLS/bucket/permiso) - no es de conexión.
+        // No hay que camuflarlo con un fallback a base64: el admin debe enterarse.
+        console.error('Error uploading to Supabase Storage:', uploadError);
+        throw new Error(uploadError.message || 'No se pudo subir el archivo a Supabase Storage.');
+      } catch (err: any) {
+        if (err?.message?.includes('No se pudo subir')) throw err;
+        console.error('Error de conexión al subir archivo, usando fallback local...', err);
       }
     }
 

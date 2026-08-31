@@ -481,8 +481,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
         showToast('¡Micrositio de Invitación Digital creado con éxito!', 'success');
       }
       setIsEventFormOpen(false);
-    } catch (err) {
-      showToast('Error al guardar el evento.', 'error');
+    } catch (err: any) {
+      showToast(err?.message ? `Error al guardar: ${err.message}` : 'Error al guardar el evento.', 'error');
     }
   };
 
@@ -493,8 +493,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
         setEvents(prev => prev.map(ev => ev.id === id ? updated : ev));
         showToast(`Estatus del evento cambiado a: ${nextStatus === 'active' ? 'RSVP Abierto' : 'RSVP Cerrado'}`, 'info');
       }
-    } catch (err) {
-      showToast('Error al cambiar el estatus del evento.', 'error');
+    } catch (err: any) {
+      showToast(err?.message ? `Error al cambiar estatus: ${err.message}` : 'Error al cambiar el estatus del evento.', 'error');
     }
   };
 
@@ -506,8 +506,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
         setEvents(prev => prev.filter(ev => ev.id !== id));
         showToast('Invitación eliminada correctamente.', 'success');
       }
-    } catch (err) {
-      showToast('Error al eliminar invitación.', 'error');
+    } catch (err: any) {
+      showToast(err?.message ? `Error al eliminar: ${err.message}` : 'Error al eliminar invitación.', 'error');
     }
   };
 
@@ -521,8 +521,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
       setEvtCoverUrl(url);
       setEvtCoverType(file.type.startsWith('video/') ? 'video' : 'image');
       showToast('Archivo subido con éxito.', 'success');
-    } catch (err) {
-      showToast('Error al subir archivo.', 'error');
+    } catch (err: any) {
+      showToast(err?.message ? `Error al subir archivo: ${err.message}` : 'Error al subir archivo.', 'error');
     } finally {
       setUploadingMedia(false);
     }
@@ -553,8 +553,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
       }
       setEvtGalleryUrls(prev => [...prev, ...uploadedUrls]);
       showToast('Fotos de galería subidas con éxito.', 'success');
-    } catch (err) {
-      showToast('Error al subir una o más fotos de la galería.', 'error');
+    } catch (err: any) {
+      showToast(err?.message ? `Error al subir foto: ${err.message}` : 'Error al subir una o más fotos de la galería.', 'error');
     } finally {
       setUploadingGallery(false);
       e.target.value = '';
@@ -595,8 +595,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
       const url = await AppService.uploadMedia(file);
       setEvtMusicUrl(url);
       showToast('Audio de fondo subido con éxito.', 'success');
-    } catch (err) {
-      showToast('Error al subir el audio.', 'error');
+    } catch (err: any) {
+      showToast(err?.message ? `Error al subir audio: ${err.message}` : 'Error al subir el audio.', 'error');
     } finally {
       setUploadingMusic(false);
       e.target.value = '';
@@ -611,8 +611,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
       const url = await AppService.uploadMedia(file);
       setLandingConfig(prev => ({ ...prev, logo_url: url }));
       showToast('Logo subido con éxito.', 'success');
-    } catch (err) {
-      showToast('Error al subir el logo.', 'error');
+    } catch (err: any) {
+      showToast(err?.message ? `Error al subir logo: ${err.message}` : 'Error al subir el logo.', 'error');
     } finally {
       setUploadingLogo(false);
     }
@@ -626,8 +626,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
       const url = await AppService.uploadMedia(file);
       setLandingConfig(prev => ({ ...prev, hero_image: url }));
       showToast('Imagen de fondo subida con éxito.', 'success');
-    } catch (err) {
-      showToast('Error al subir la imagen de fondo.', 'error');
+    } catch (err: any) {
+      showToast(err?.message ? `Error al subir imagen: ${err.message}` : 'Error al subir la imagen de fondo.', 'error');
     } finally {
       setUploadingHeroBg(false);
     }
@@ -641,8 +641,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
       const url = await AppService.uploadMedia(file);
       setSrvImageUrl(url);
       showToast('Imagen del servicio subida con éxito.', 'success');
-    } catch (err) {
-      showToast('Error al subir la imagen del servicio.', 'error');
+    } catch (err: any) {
+      showToast(err?.message ? `Error al subir imagen: ${err.message}` : 'Error al subir la imagen del servicio.', 'error');
     } finally {
       setUploadingServiceImage(false);
       e.target.value = '';
@@ -676,8 +676,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
       }
       setGItemMedia(prev => [...prev, ...uploaded]);
       showToast('Fotos/videos subidos con éxito.', 'success');
-    } catch (err) {
-      showToast('Error al subir uno o más archivos.', 'error');
+    } catch (err: any) {
+      showToast(err?.message ? `Error al subir archivo: ${err.message}` : 'Error al subir uno o más archivos.', 'error');
     } finally {
       setUploadingGalleryMedia(false);
       e.target.value = '';
