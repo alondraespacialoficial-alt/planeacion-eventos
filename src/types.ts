@@ -7,6 +7,7 @@ export interface Event {
   id: string;
   created_at: string;
   title: string;
+  slug?: string; // identificador legible para el link público (ej. "cumple-luciana-a3f9"), generado una sola vez al crear el evento
   description: string;
   date: string;
   time: string;

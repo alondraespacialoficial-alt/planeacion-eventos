@@ -102,7 +102,9 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
   useEffect(() => {
     if (!event) return;
 
-    const targetDate = new Date(`${event.date}T${event.time}:00`).getTime();
+    // event.time puede venir como "HH:MM" (input) o "HH:MM:SS" (columna TIME de Postgres) - normalizamos a HH:MM:SS
+    const normalizedTime = event.time.length === 5 ? `${event.time}:00` : event.time;
+    const targetDate = new Date(`${event.date}T${normalizedTime}`).getTime();
 
     const interval = setInterval(() => {
       const now = new Date().getTime();
@@ -157,7 +159,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
   };
 
   const handleCopyLink = () => {
-    const shareUrl = `${window.location.origin}/#event/${eventId}`;
+    const shareUrl = `${window.location.origin}/#event/${event?.slug || eventId}`;
     navigator.clipboard.writeText(shareUrl);
     alert('¡Enlace de invitación copiado al portapapeles!');
   };

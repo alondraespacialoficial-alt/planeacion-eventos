@@ -443,6 +443,10 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
       showToast('Por favor complete todos los campos obligatorios del evento.', 'error');
       return;
     }
+    if (/spotify\.com|youtube\.com|youtu\.be/i.test(evtMusicUrl)) {
+      showToast('El audio de fondo no puede ser un link de Spotify/YouTube (no se puede reproducir directo). Sube un archivo .mp3 o pega un enlace directo terminado en .mp3.', 'error');
+      return;
+    }
 
     try {
       const payload = {
@@ -1468,7 +1472,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                     <div className="pt-4 border-t border-gray-800/80 flex justify-between items-center text-[10px] font-mono gap-1 flex-wrap">
                       <button 
                         onClick={() => {
-                          const link = `${window.location.origin}/#event/${ev.id}`;
+                          const link = `${window.location.origin}/#event/${ev.slug || ev.id}`;
                           navigator.clipboard.writeText(link);
                           showToast('¡Enlace de invitación copiado al portapapeles!', 'success');
                         }}
@@ -1480,7 +1484,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                       
                       <button 
                         onClick={() => {
-                          const link = `${window.location.origin}/#event/${ev.id}`;
+                          const link = `${window.location.origin}/#event/${ev.slug || ev.id}`;
                           const msg = `¡Hola! Te compartimos el enlace de acceso rápido y confirmaciones RSVP para el evento *${ev.title}*:\n${link}`;
                           window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
                         }}
@@ -1491,7 +1495,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                       </button>
 
                       <button 
-                        onClick={() => onNavigate(`event/${ev.id}`)}
+                        onClick={() => onNavigate(`event/${ev.slug || ev.id}`)}
                         className="text-gray-400 hover:text-white flex items-center gap-0.5"
                       >
                         VER micrositio <ExternalLink className="w-3 h-3" />
@@ -2797,6 +2801,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
               <div>
                 <label className="block font-mono text-gray-400 mb-1">AUDIO DE FONDO (OPCIONAL)</label>
                 <input type="text" value={evtMusicUrl} onChange={(e) => setEvtMusicUrl(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white mb-2" placeholder="Enlace directo .mp3 o suba abajo" />
+                <p className="text-[10px] text-amber-500/80 mb-2">⚠ No uses links de Spotify/YouTube: no se pueden reproducir directo (son streaming protegido). Sube un archivo .mp3 abajo o pega un enlace directo que termine en .mp3.</p>
                 <div className="border border-dashed border-gray-800 rounded-lg p-4 bg-black/20 text-center relative cursor-pointer">
                   <input type="file" onChange={handleMusicFileChange} accept="audio/*" className="absolute inset-0 opacity-0 cursor-pointer" />
                   {uploadingMusic ? <p className="text-amber-500">Subiendo audio...</p> : <p className="text-gray-500">Arrastre o seleccione un archivo de audio (mp3) para almacenar en Supabase Storage</p>}

@@ -703,6 +703,22 @@ function notifyTelegram(event: TelegramNotifyEvent, payload: Record<string, any>
   supabase.functions.invoke('telegram-notify', { body: { event, payload } }).catch(() => {});
 }
 
+// Slug legible para el link público de un evento (ej. "cumple-luciana-a3f9"). Se genera
+// una sola vez al crear el evento; el sufijo aleatorio evita colisiones sin tener que
+// consultar la BD primero (hay un índice único parcial en `eventos.slug`).
+function makeEventSlug(title: string): string {
+  const base = (title || 'evento')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60) || 'evento';
+  const suffix = Math.random().toString(36).slice(2, 6);
+  return `${base}-${suffix}`;
+}
+
 // --- APP SERVICES WRAPPER (SUPABASE REAL + LOCAL FALLBACK) ---
 export const AppService = {
   // --- TABLE VERIFICATION & STATUS ---
@@ -905,13 +921,14 @@ export const AppService = {
     return all;
   },
 
-  async getEventById(id: string): Promise<Event | null> {
+  async getEventById(idOrSlug: string): Promise<Event | null> {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
     if (isSupabaseConfigured && supabase && supabaseTablesExist) {
       try {
         const { data, error } = await supabase
           .from('eventos')
           .select('*')
-          .eq('id', id)
+          .eq(isUuid ? 'id' : 'slug', idOrSlug)
           .single();
         
         if (error) throw error;
@@ -923,7 +940,7 @@ export const AppService = {
 
     // Fallback Local Storage
     const all = LocalStorageDB.getEvents();
-    return all.find(e => e.id === id) || null;
+    return all.find(e => e.id === idOrSlug || e.slug === idOrSlug) || null;
   },
 
   // Public showcase: only events explicitly authorized by their owner (public_showcase = true)
@@ -957,6 +974,7 @@ export const AppService = {
     const newEvent: Event = {
       ...event,
       id: crypto.randomUUID(),
+      slug: event.slug || makeEventSlug(event.title),
       created_at: new Date().toISOString(),
       created_by: currentUser.id
     } as Event;
@@ -1841,6 +1859,7 @@ CREATE TABLE IF NOT EXISTS public.eventos (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     title TEXT NOT NULL,
+    slug TEXT,
     description TEXT,
     date DATE NOT NULL,
     time TIME WITHOUT TIME ZONE NOT NULL,
@@ -2103,6 +2122,9 @@ ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS dress_code_note TEXT;
 ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS gift_registry JSONB DEFAULT '[]';
 ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS itinerary JSONB DEFAULT '[]';
 ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS restrictions_note TEXT;
+ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS slug TEXT;
+-- Link público legible (ej. #event/cumple-luciana-a3f9) - único pero permite NULL en eventos viejos sin slug
+CREATE UNIQUE INDEX IF NOT EXISTS eventos_slug_unique_idx ON public.eventos(slug) WHERE slug IS NOT NULL;
 -- Compatibilidad: instalaciones viejas pueden tener la columna id sin DEFAULT gen_random_uuid()
 ALTER TABLE public.eventos ALTER COLUMN id SET DEFAULT gen_random_uuid();
 ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS guests_count INTEGER;
