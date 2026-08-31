@@ -953,9 +953,10 @@ export const AppService = {
   },
 
   async createEvent(event: Omit<Event, 'id' | 'created_at' | 'created_by'>, currentUser: UserSession): Promise<Event> {
+    // Generado en el cliente (no depende de que la columna `id` tenga DEFAULT gen_random_uuid() en la BD real).
     const newEvent: Event = {
       ...event,
-      id: isSupabaseConfigured ? undefined as any : 'evt-' + Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       created_at: new Date().toISOString(),
       created_by: currentUser.id
     } as Event;
@@ -2102,6 +2103,8 @@ ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS dress_code_note TEXT;
 ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS gift_registry JSONB DEFAULT '[]';
 ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS itinerary JSONB DEFAULT '[]';
 ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS restrictions_note TEXT;
+-- Compatibilidad: instalaciones viejas pueden tener la columna id sin DEFAULT gen_random_uuid()
+ALTER TABLE public.eventos ALTER COLUMN id SET DEFAULT gen_random_uuid();
 ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS guests_count INTEGER;
 -- Compatibilidad: agrega columnas de IVA/descuento % a instalaciones existentes de quotes
 ALTER TABLE public.quotes ADD COLUMN IF NOT EXISTS apply_iva BOOLEAN DEFAULT false;
