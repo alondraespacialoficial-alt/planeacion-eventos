@@ -2760,6 +2760,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
               <div>
                 <label className="block font-mono text-gray-400 mb-1">IFRAME SRC DE GOOGLE MAPS (OPCIONAL)</label>
                 <input type="text" value={evtMapEmbedUrl} onChange={(e) => setEvtMapEmbedUrl(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" placeholder="https://www.google.com/maps/embed?pb=..." />
+                <p className="text-[10px] text-gray-500 mt-1">Solo pega el código de "Insertar un mapa" de Google Maps (debe empezar con .../maps/embed?...). Un link normal (compartir/copiar dirección) NO funciona aquí y se mostrará un mapa referencial en su lugar.</p>
               </div>
 
               <div>

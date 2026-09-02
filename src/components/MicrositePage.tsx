@@ -211,6 +211,9 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
 
   const isEventClosed = event.status !== 'active';
   const rsvpDeadlinePassed = new Date() > new Date(`${event.rsvp_deadline}T23:59:59`);
+  const mapsSearchUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location_name + ' ' + event.location_address)}`;
+  // Links normales de Google Maps (no de la API de Embed) son rechazados al intentar iframearlos ("google.com rechazó la conexión")
+  const isValidMapEmbedUrl = !!event.map_embed_url && event.map_embed_url.includes('/maps/embed');
 
   return (
     <div className="min-h-screen bg-[#08090b] text-gray-200 font-sans relative selection:bg-amber-400 selection:text-black pb-20">
@@ -427,7 +430,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
               MAPA DE GEOLOCALIZACIÓN
             </span>
             <a 
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location_name + ' ' + event.location_address)}`}
+              href={mapsSearchUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-[10px] font-mono text-amber-400 hover:underline tracking-wider"
@@ -436,7 +439,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
             </a>
           </div>
           <div className="aspect-[16/9] w-full bg-gray-900/40 relative">
-            {event.map_embed_url ? (
+            {isValidMapEmbedUrl ? (
               <iframe
                 title="Google Maps Location"
                 src={event.map_embed_url}
@@ -449,11 +452,32 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
                 className="filter invert grayscale opacity-80"
               />
             ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-gradient-to-br from-gray-900 to-black">
-                <MapPin className="w-10 h-10 text-amber-500/40 mb-3 animate-bounce" />
-                <p className="font-serif text-white text-base font-light mb-1">{event.location_name}</p>
-                <p className="text-xs text-gray-500 max-w-sm">{event.location_address}</p>
-              </div>
+              // Sin mapa embebido real todavía: mapa referencial decorativo (mientras se integra la API de Google Maps)
+              <a
+                href={mapsSearchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute inset-0 group block"
+              >
+                <img
+                  src="https://eztuwxavcvqingoycorg.supabase.co/storage/v1/object/public/event-assets/Gemini_Generated_Image_o5x1h9o5x1h9o5x1.jpg"
+                  alt="Mapa referencial"
+                  className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-300"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/20" />
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+                  <span className="relative flex h-4 w-4 mb-4">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500" />
+                  </span>
+                  <p className="font-serif text-white text-base font-medium mb-1">{event.location_name}</p>
+                  <p className="text-xs text-gray-400 max-w-sm mb-4">{event.location_address}</p>
+                  <span className="inline-flex items-center gap-2 text-[10px] font-mono text-black bg-amber-400 group-hover:bg-amber-300 transition-colors px-4 py-2 rounded-full tracking-widest">
+                    <MapPin className="w-3 h-3" />
+                    VER UBICACIÓN EXACTA
+                  </span>
+                </div>
+              </a>
             )}
           </div>
         </div>
