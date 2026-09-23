@@ -1095,11 +1095,9 @@ export const AppService = {
       try {
         const { data, error } = await supabase
           .from('rsvps')
-          .insert([newRsvp])
-          .select()
-          .single();
+          .insert([newRsvp]);
         if (error) throw error;
-        return data as RSVP;
+        return newRsvp;
       } catch (err: any) {
         const supabaseError = {
           status: err?.status,
@@ -2175,18 +2173,18 @@ ALTER TABLE public.rate_catalog ENABLE ROW LEVEL SECURITY;
 -- 4.1. Policies for EVENTOS
 DROP POLICY IF EXISTS "Public read active events" ON public.eventos;
 CREATE POLICY "Public read active events" ON public.eventos
-    FOR SELECT USING (status = 'active');
+  FOR SELECT TO anon, authenticated USING (status = 'active');
 
 DROP POLICY IF EXISTS "Users read own events" ON public.eventos;
 CREATE POLICY "Users read own events" ON public.eventos
-    FOR SELECT USING (
+  FOR SELECT TO authenticated USING (
         auth.uid() = created_by OR 
         auth.jwt() ->> 'email' = client_email
     );
 
 DROP POLICY IF EXISTS "Admins full access to events" ON public.eventos;
 CREATE POLICY "Admins full access to events" ON public.eventos
-    FOR ALL USING (
+  FOR ALL TO authenticated USING (
         auth.uid() = created_by OR 
         public.is_admin()
     );
@@ -2194,11 +2192,11 @@ CREATE POLICY "Admins full access to events" ON public.eventos
 -- 4.2. Policies for RSVPS
 DROP POLICY IF EXISTS "Public insert RSVPs" ON public.rsvps;
 CREATE POLICY "Public insert RSVPs" ON public.rsvps
-    FOR INSERT WITH CHECK (true);
+  FOR INSERT TO anon, authenticated WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Owners read RSVP confirmations" ON public.rsvps;
 CREATE POLICY "Owners read RSVP confirmations" ON public.rsvps
-    FOR SELECT USING (
+  FOR SELECT TO authenticated USING (
         EXISTS (
             SELECT 1 FROM public.eventos
             WHERE public.eventos.id = public.rsvps.event_id
