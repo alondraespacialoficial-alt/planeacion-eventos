@@ -1101,9 +1101,20 @@ export const AppService = {
         if (error) throw error;
         return data as RSVP;
       } catch (err: any) {
-        console.error('Error submitting RSVP to Supabase, trying fallback...', err);
-        if (err?.code || err?.details || err?.hint) {
-          throw new Error(err.message || 'No se pudo registrar la asistencia en Supabase.');
+        const supabaseError = {
+          status: err?.status,
+          code: err?.code,
+          message: err?.message,
+          details: err?.details,
+          hint: err?.hint
+        };
+        console.error('Error submitting RSVP to Supabase:', supabaseError);
+
+        // Auth/RLS errors must be visible; saving locally would report a false success.
+        if (err?.status === 401 || err?.status === 403 || err?.code || err?.details || err?.hint) {
+          throw new Error(
+            `Supabase rechazó el RSVP (${err?.status || err?.code || 'error'}): ${err?.message || 'revisa URL, anon key y policies RLS.'}`
+          );
         }
       }
     }
