@@ -162,7 +162,8 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
       setSubmittedRsvp(created);
       setSubmitSuccess(true);
     } catch (err) {
-      alert('Hubo un problema al registrar tu asistencia. Por favor vuelve a intentarlo.');
+      const message = err instanceof Error ? err.message : 'Error desconocido de Supabase.';
+      alert(`No se pudo registrar tu asistencia.\n\n${message}`);
     } finally {
       setSubmitting(false);
     }
