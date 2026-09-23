@@ -1087,7 +1087,7 @@ export const AppService = {
       ...rsvp,
       pass_code: generatedPass,
       checked_in: false,
-      id: 'rsvp-' + Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       created_at: new Date().toISOString()
     };
 
@@ -1100,8 +1100,11 @@ export const AppService = {
           .single();
         if (error) throw error;
         return data as RSVP;
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error submitting RSVP to Supabase, trying fallback...', err);
+        if (err?.code || err?.details || err?.hint) {
+          throw new Error(err.message || 'No se pudo registrar la asistencia en Supabase.');
+        }
       }
     }
 
@@ -1895,8 +1898,15 @@ CREATE TABLE IF NOT EXISTS public.rsvps (
     plus_ones INTEGER DEFAULT 0 NOT NULL,
     notes TEXT,
     consent_privacy BOOLEAN NOT NULL,
-    consent_terms BOOLEAN NOT NULL
+    consent_terms BOOLEAN NOT NULL,
+    pass_code TEXT,
+    checked_in BOOLEAN DEFAULT false,
+    checked_in_at TIMESTAMP WITH TIME ZONE
 );
+
+  ALTER TABLE public.rsvps ADD COLUMN IF NOT EXISTS pass_code TEXT;
+  ALTER TABLE public.rsvps ADD COLUMN IF NOT EXISTS checked_in BOOLEAN DEFAULT false;
+  ALTER TABLE public.rsvps ADD COLUMN IF NOT EXISTS checked_in_at TIMESTAMP WITH TIME ZONE;
 
 -- 1.3. Create SERVICES Table
 CREATE TABLE IF NOT EXISTS public.services (

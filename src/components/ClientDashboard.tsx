@@ -40,7 +40,8 @@ import {
   Camera,
   Ticket,
   Check,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { Event, RSVP, UserSession, Quote, PaymentReceipt, VendorItem } from '../types';
 import { AppService, isSupabaseConfigured } from '../lib/supabase';
@@ -55,6 +56,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
+  const [rsvpError, setRsvpError] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [payments, setPayments] = useState<PaymentReceipt[]>([]);
   const [vendors, setVendors] = useState<VendorItem[]>([]);
@@ -141,16 +143,36 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
   }, [currentUser]);
 
   useEffect(() => {
+    if (!selectedEvent) {
+      setRsvps([]);
+      setRsvpError(null);
+      return;
+    }
+
     async function loadRSVPs() {
-      if (!selectedEvent) return;
       try {
         const rsvpData = await AppService.getRSVPsForEvent(selectedEvent.id);
         setRsvps(rsvpData);
+        setRsvpError(null);
       } catch (err) {
         console.error('Error loading RSVPs', err);
+        setRsvpError('No se pudieron cargar las respuestas de asistencia.');
       }
     }
+
     loadRSVPs();
+
+    // Keep an open dashboard current while guests submit their responses.
+    const refreshInterval = window.setInterval(loadRSVPs, 15000);
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'rsvps_data') loadRSVPs();
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.clearInterval(refreshInterval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, [selectedEvent]);
 
   // Calculations for RSVPs
@@ -978,9 +1000,20 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                   <div>
                     <h3 className="font-serif text-lg text-white">Registro de Asistencia de Invitados</h3>
                     <p className="text-xs text-gray-500 font-light mt-0.5">Filtre y busque respuestas o exporte toda la lista para el control de mesas.</p>
+                    {rsvpError && (
+                      <p className="text-xs text-red-400 mt-2">{rsvpError} Intenta actualizar nuevamente.</p>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={() => setSelectedEvent({ ...selectedEvent })}
+                      className="p-2 rounded-xl border border-gray-800 text-gray-400 hover:text-amber-400 hover:border-amber-500/40 transition-colors"
+                      title="Actualizar respuestas"
+                      aria-label="Actualizar respuestas"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
                     <div className="relative shrink-0">
                       <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-600 pointer-events-none">
                         <Search className="w-4 h-4" />
