@@ -350,26 +350,6 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
       );
     });
 
-  // Action: Accept/Approve a Quote in client portal
-  const handleApproveQuote = async (quoteId: string) => {
-    const confirmApprove = window.confirm('¿Está seguro de que desea aprobar esta cotización formalmente?');
-    if (!confirmApprove) return;
-
-    try {
-      const updated = await AppService.updateQuote(quoteId, { status: 'approved' });
-      if (updated) {
-        setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, status: 'approved' } : q));
-        if (selectedQuote?.id === quoteId) {
-          setSelectedQuote(prev => prev ? { ...prev, status: 'approved' } : null);
-        }
-        showToast('Cotización aprobada correctamente. Nuestro equipo comercial se comunicará para el contrato formal.', 'success');
-      }
-    } catch (err) {
-      console.error('Error approving quote', err);
-      showToast('Error al aprobar cotización.', 'error');
-    }
-  };
-
   // Export Attendees to CSV
   const handleExportCSV = () => {
     if (!selectedEvent || rsvps.length === 0) {
@@ -790,17 +770,14 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                         IMPRIMIR / PDF
                       </button>
                       
-                      {selectedQuote.status === 'sent' && (
-                        <button 
-                          onClick={() => handleApproveQuote(selectedQuote.id)}
-                          className="px-5 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-mono text-[11px] tracking-widest font-bold flex items-center gap-1.5 transition-colors"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                          APROBAR COTIZACIÓN
-                        </button>
-                      )}
                     </div>
                   </div>
+
+                  {selectedQuote.status === 'sent' && (
+                    <p className="text-xs text-gray-400 border-b border-gray-800 pb-4">
+                      Para autorizar esta cotización, confirma con el asesor que te la compartió. Actualizaremos su estado en tu portal.
+                    </p>
+                  )}
 
                   {/* Visual Screen Quote Preview */}
                   <div className="space-y-6">
