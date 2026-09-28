@@ -51,7 +51,7 @@ import {
 } from 'lucide-react';
 import { Event, UserSession, Service, Lead, Quote, QuoteItem, LandingConfig, PaymentReceipt, UserProfile, GalleryItem, RateItem } from '../types';
 import { AppService, isSupabaseConfigured, SUPABASE_SQL_BLUEPRINT } from '../lib/supabase';
-import { generateQuotePdf } from '../lib/pdfGenerator';
+import { generateQuotePdf, generateQuotePdfBase64 } from '../lib/pdfGenerator';
 
 interface AdminDashboardProps {
   currentUser: UserSession;
@@ -92,6 +92,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   const [events, setEvents] = useState<Event[]>([]);
   const [eventSearch, setEventSearch] = useState('');
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [sendingQuoteId, setSendingQuoteId] = useState<string | null>(null);
   const [payments, setPayments] = useState<PaymentReceipt[]>([]);
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'pending' | 'verified' | 'rejected'>('all');
   const [selectedPaymentModal, setSelectedPaymentModal] = useState<PaymentReceipt | null>(null);
@@ -810,7 +811,47 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
       }
       setIsQuoteFormOpen(false);
     } catch (err) {
-      showToast('Error al guardar cotización.', 'error');
+      showToast(err instanceof Error ? err.message : 'Error al guardar cotización.', 'error');
+    }
+  };
+
+  const handleSendQuoteEmail = async (quote: Quote) => {
+    if (quote.status === 'sent' && !window.confirm(`¿Reenviar por correo la cotización ${quote.folio}?`)) return;
+    setSendingQuoteId(quote.id);
+    try {
+      const pdfBase64 = generateQuotePdfBase64({
+        folio: quote.folio,
+        date: new Date(quote.created_at || Date.now()).toLocaleDateString('es-MX'),
+        clientName: quote.client_name,
+        clientPhone: quote.client_phone || 'N/A',
+        clientEmail: quote.client_email,
+        eventType: 'Cotización Celebra tu Evento',
+        items: quote.items.map(item => ({
+          description: item.description,
+          price: item.price,
+          quantity: item.quantity,
+          discount: item.discount
+        })),
+        subtotal: quote.subtotal,
+        discountTotal: quote.discount_total,
+        applyIva: quote.apply_iva,
+        ivaTotal: quote.iva_total,
+        discountPercent: quote.discount_percent,
+        percentDiscountTotal: quote.percent_discount_total,
+        total: quote.total,
+        observations: quote.observations,
+        terms: quote.terms,
+        logoUrl: landingConfig.logo_url,
+        businessAddress: landingConfig.business_address,
+        whatsappPhone: landingConfig.whatsapp_phone
+      });
+      await AppService.sendQuoteEmail(quote.id, pdfBase64);
+      setQuotes(prev => prev.map(item => item.id === quote.id ? { ...item, status: 'sent' } : item));
+      showToast(`Cotización ${quote.folio} enviada a ${quote.client_email}.`, 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'No se pudo enviar la cotización.', 'error');
+    } finally {
+      setSendingQuoteId(null);
     }
   };
 
@@ -1619,6 +1660,17 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                       <td className="py-4 px-6 text-right font-mono font-bold text-white text-sm">${q.total.toLocaleString('es-MX')}</td>
                       <td className="py-4 px-6 text-center">
                         <div className="flex justify-center gap-2">
+                          {(q.status === 'draft' || q.status === 'sent') && (
+                            <button
+                              onClick={() => handleSendQuoteEmail(q)}
+                              disabled={sendingQuoteId === q.id}
+                              className="p-1.5 hover:bg-emerald-500/10 text-emerald-400 rounded disabled:opacity-50"
+                              title={q.status === 'sent' ? 'Reenviar cotización por correo' : 'Enviar cotización por correo'}
+                              aria-label={q.status === 'sent' ? 'Reenviar cotización por correo' : 'Enviar cotización por correo'}
+                            >
+                              <Mail className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                           <button 
                             onClick={() => generateQuotePdf({
                               folio: q.folio,
@@ -2994,10 +3046,11 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                 <label className="block font-mono text-gray-400 mb-1">ESTATUS COTIZACIÓN</label>
                 <select value={quoteStatus} onChange={(e) => setQuoteStatus(e.target.value as any)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white cursor-pointer">
                   <option value="draft">Borrador (Oculto al cliente)</option>
-                  <option value="sent">Enviado (Disponible para el cliente)</option>
-                  <option value="approved">Aprobado / Contratado</option>
-                  <option value="cancelled">Cancelado</option>
+                  <option value="sent" disabled={!editingQuoteId || quoteStatus !== 'sent'}>Enviado (se actualiza al enviar el correo)</option>
+                  <option value="approved" disabled={!editingQuoteId}>Aprobado / Contratado</option>
+                  <option value="cancelled" disabled={!editingQuoteId}>Cancelado</option>
                 </select>
+                {!editingQuoteId && <p className="mt-1 text-[10px] text-gray-500">Guarda el borrador y usa el icono de correo para enviarlo al cliente.</p>}
               </div>
 
               {/* Items Table Builder */}

@@ -30,7 +30,7 @@ export interface QuotePdfData {
   whatsappPhone?: string;
 }
 
-export function generateQuotePdf(data: QuotePdfData): void {
+function buildQuotePdfDocument(data: QuotePdfData): jsPDF {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -273,6 +273,16 @@ export function generateQuotePdf(data: QuotePdfData): void {
   const contactStr = `WhatsApp: ${data.whatsappPhone || '+52 55 1234 5678'}  |  ${data.businessAddress || 'Polanco, CDMX'}`;
   doc.text(contactStr, pageWidth / 2, footerY + 11, { align: 'center' });
 
-  // Save the PDF
-  doc.save(`Cotizacion_CelebraTuEvento_${data.folio}.pdf`);
+  return doc;
+}
+
+export function generateQuotePdf(data: QuotePdfData): void {
+  buildQuotePdfDocument(data).save(`Cotizacion_CelebraTuEvento_${data.folio}.pdf`);
+}
+
+export function generateQuotePdfBase64(data: QuotePdfData): string {
+  const dataUri = buildQuotePdfDocument(data).output('datauristring');
+  const separatorIndex = dataUri.indexOf(',');
+  if (separatorIndex === -1) throw new Error('No se pudo generar el PDF de la cotización.');
+  return dataUri.slice(separatorIndex + 1);
 }

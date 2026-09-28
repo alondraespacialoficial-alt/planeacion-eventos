@@ -1725,6 +1725,31 @@ export const AppService = {
   },
 
   // --- COTIZADOR INTERNO ---
+  async sendQuoteEmail(quoteId: string, pdfBase64: string): Promise<void> {
+    if (!isSupabaseConfigured || !supabase || !supabaseTablesExist) {
+      throw new Error('El envío de cotizaciones requiere una conexión activa con Supabase.');
+    }
+
+    const { data, error } = await supabase.functions.invoke('send-quote-email', {
+      body: { quoteId, pdfBase64 }
+    });
+
+    if (error) {
+      let message = error.message;
+      const context = (error as any).context;
+      if (context instanceof Response) {
+        try {
+          const details = await context.json();
+          message = details?.error || message;
+        } catch {
+          // Keep the Functions client error when no JSON response is available.
+        }
+      }
+      throw new Error(message);
+    }
+    if (data?.error) throw new Error(data.error);
+  },
+
   async getQuotes(currentUser: UserSession | null): Promise<Quote[]> {
     if (isSupabaseConfigured && supabase && supabaseTablesExist) {
       try {
