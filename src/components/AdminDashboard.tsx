@@ -1257,6 +1257,47 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
 
   const tabuladorCartTotal = tabuladorCart.reduce((sum, c) => sum + (c.unitPrice * c.quantity), 0);
 
+  const verifiedPaymentsByEmail = payments.reduce((totals, payment) => {
+    if (payment.status !== 'verified') return totals;
+    const email = payment.client_email.trim().toLowerCase();
+    totals.set(email, (totals.get(email) || 0) + payment.amount);
+    return totals;
+  }, new Map<string, number>());
+
+  const pendingPaymentsByEmail = payments.reduce((totals, payment) => {
+    if (payment.status !== 'pending') return totals;
+    const email = payment.client_email.trim().toLowerCase();
+    totals.set(email, (totals.get(email) || 0) + payment.amount);
+    return totals;
+  }, new Map<string, number>());
+
+  const approvedAccountsByEmail = new Map<string, { email: string; clientName: string; quoteTotal: number }>();
+  quotes.forEach(quote => {
+    if (quote.status !== 'approved') return;
+    const email = quote.client_email.trim().toLowerCase();
+    if (!email) return;
+
+    const account = approvedAccountsByEmail.get(email) || {
+      email,
+      clientName: quote.client_name,
+      quoteTotal: 0
+    };
+    account.quoteTotal += quote.total;
+    approvedAccountsByEmail.set(email, account);
+  });
+
+  const clientAccounts = Array.from(approvedAccountsByEmail.values())
+    .map(account => {
+      const paidVerified = verifiedPaymentsByEmail.get(account.email) || 0;
+      return {
+        ...account,
+        paidVerified,
+        pendingReview: pendingPaymentsByEmail.get(account.email) || 0,
+        pendingBalance: Math.max(0, account.quoteTotal - paidVerified)
+      };
+    })
+    .sort((a, b) => a.clientName.localeCompare(b.clientName, 'es'));
+
   return (
     <div className="min-h-screen bg-[#07080a] text-gray-200 font-sans pb-16 selection:bg-amber-400 selection:text-black">
       
@@ -1819,6 +1860,44 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                   Actualizar Lista
                 </button>
               </div>
+            </div>
+
+            <div className="bg-[#0d0e12] border border-gray-800 rounded-xl overflow-hidden">
+              <div className="p-5 border-b border-gray-800">
+                <h4 className="font-serif text-lg text-white">Saldos por Cliente</h4>
+                <p className="text-xs text-gray-500 mt-1">Solo cotizaciones aprobadas; los comprobantes pendientes no reducen el saldo.</p>
+              </div>
+              {clientAccounts.length === 0 ? (
+                <p className="p-8 text-center text-xs font-mono text-gray-500">Aún no hay cotizaciones aprobadas para calcular saldos.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-black/40 border-b border-gray-800 text-[10px] font-mono text-gray-500 uppercase">
+                        <th className="py-3 px-5">Cliente</th>
+                        <th className="py-3 px-5 text-right">Total Aprobado</th>
+                        <th className="py-3 px-5 text-right">Pagado Verificado</th>
+                        <th className="py-3 px-5 text-right">En Revisión</th>
+                        <th className="py-3 px-5 text-right">Saldo Pendiente</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-800/40">
+                      {clientAccounts.map(account => (
+                        <tr key={account.email} className="hover:bg-black/20">
+                          <td className="py-3 px-5">
+                            <p className="text-white font-medium">{account.clientName || 'Cliente'}</p>
+                            <p className="text-[10px] font-mono text-gray-500">{account.email}</p>
+                          </td>
+                          <td className="py-3 px-5 text-right font-mono text-white">${account.quoteTotal.toLocaleString('es-MX')}</td>
+                          <td className="py-3 px-5 text-right font-mono text-emerald-400">${account.paidVerified.toLocaleString('es-MX')}</td>
+                          <td className="py-3 px-5 text-right font-mono text-amber-400">${account.pendingReview.toLocaleString('es-MX')}</td>
+                          <td className="py-3 px-5 text-right font-mono font-bold text-amber-400">${account.pendingBalance.toLocaleString('es-MX')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* Financial Stats Bar */}

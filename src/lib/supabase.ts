@@ -1184,8 +1184,9 @@ export const AppService = {
         if (error) throw error;
         notifyTelegram('payment_new', data as PaymentReceipt);
         return data as PaymentReceipt;
-      } catch (err) {
-        console.error('Error submitting payment receipt to Supabase, using local fallback', err);
+      } catch (err: any) {
+        console.error('Error submitting payment receipt to Supabase:', err);
+        throw new Error(`No se pudo guardar el comprobante en Supabase: ${err?.message || 'verifica la conexión y las políticas de acceso.'}`);
       }
     }
 

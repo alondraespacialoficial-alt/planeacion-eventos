@@ -188,9 +188,8 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
   const totalGuestsProjected = confirmedCount + totalPlusOnes;
 
   // Account & Payments Financial Calculations
-  const approvedQuoteTotal = quotes
-    .filter(q => q.status === 'approved')
-    .reduce((sum, q) => sum + q.total, 0) || 39250; // Fallback estimate if no formal quote yet
+  const approvedQuotes = quotes.filter(q => q.status === 'approved');
+  const approvedQuoteTotal = approvedQuotes.reduce((sum, q) => sum + q.total, 0);
   
   const totalPaidVerified = payments
     .filter(p => p.status === 'verified')
@@ -201,7 +200,9 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
     .reduce((sum, p) => sum + p.amount, 0);
 
   const pendingBalance = Math.max(0, approvedQuoteTotal - totalPaidVerified);
-  const paymentProgressPercent = Math.min(100, Math.round((totalPaidVerified / approvedQuoteTotal) * 100));
+  const paymentProgressPercent = approvedQuoteTotal > 0
+    ? Math.min(100, Math.round((totalPaidVerified / approvedQuoteTotal) * 100))
+    : 0;
 
   // --- HANDLERS FOR PAYMENTS ---
   const handleUploadPaymentProof = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -246,7 +247,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
       setPayProofUrl('');
       showToast('¡Comprobante enviado a verificación con éxito!', 'success');
     } catch (err) {
-      showToast('Error al registrar el pago.', 'error');
+      showToast(err instanceof Error ? err.message : 'Error al registrar el pago.', 'error');
     }
   };
 
@@ -1180,7 +1181,9 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                   <div className="bg-[#12141a] border border-gray-800/80 p-5 rounded-2xl">
                     <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1">PRESUPUESTO TOTAL CONTRATADO</p>
                     <p className="font-serif text-2xl text-white font-semibold">${approvedQuoteTotal.toLocaleString('es-MX')} <span className="text-xs text-gray-500 font-mono font-normal">MXN</span></p>
-                    <p className="text-[10px] text-gray-500 mt-2 font-mono">Basado en cotización formal aprobada</p>
+                    <p className="text-[10px] text-gray-500 mt-2 font-mono">
+                      {approvedQuotes.length > 0 ? 'Basado en cotización formal aprobada' : 'Sin cotización formal aprobada'}
+                    </p>
                   </div>
 
                   <div className="bg-[#12141a] border border-emerald-500/20 bg-emerald-500/5 p-5 rounded-2xl">
@@ -1194,7 +1197,9 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                   <div className="bg-[#12141a] border border-amber-500/20 bg-amber-500/5 p-5 rounded-2xl">
                     <p className="text-[10px] font-mono text-amber-400 uppercase tracking-widest mb-1">SALDO PENDIENTE POR LIQUIDAR</p>
                     <p className="font-serif text-2xl text-amber-400 font-semibold">${pendingBalance.toLocaleString('es-MX')} <span className="text-xs text-amber-600 font-mono font-normal">MXN</span></p>
-                    <p className="text-[10px] text-gray-500 mt-2 font-mono">A liquidar antes de la fecha del evento</p>
+                    <p className="text-[10px] text-gray-500 mt-2 font-mono">
+                      {approvedQuotes.length > 0 ? 'A liquidar antes de la fecha del evento' : 'El saldo se calculará al aprobar una cotización'}
+                    </p>
                   </div>
                 </div>
 
