@@ -1772,36 +1772,51 @@ export const AppService = {
   },
 
   async createQuote(quote: Omit<Quote, 'id' | 'folio' | 'created_at'>): Promise<Quote> {
-    const all = LocalStorageDB.getQuotes();
-    
-    // Generate simple sequential folio: QT-2026-XXX
     const currentYear = new Date().getFullYear();
-    const lastNum = all.length > 0 
-      ? parseInt(all[0].folio.split('-').pop() || '0') 
-      : 0;
-    const nextNum = (lastNum + 1).toString().padStart(3, '0');
-    const folio = `QT-${currentYear}-${nextNum}`;
 
+    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
+      try {
+        const { data: existingQuotes, error: fetchError } = await supabase
+          .from('quotes')
+          .select('folio')
+          .like('folio', `QT-${currentYear}-%`);
+        if (fetchError) throw fetchError;
+
+        const lastNum = (existingQuotes || []).reduce((highest, existingQuote) => {
+          const match = existingQuote.folio.match(new RegExp(`^QT-${currentYear}-(\\d+)$`));
+          return Math.max(highest, Number(match?.[1] || 0));
+        }, 0);
+        const folio = `QT-${currentYear}-${(lastNum + 1).toString().padStart(3, '0')}`;
+        const newQuote: Quote = {
+          ...quote,
+          id: 'q-' + Math.random().toString(36).substr(2, 9),
+          folio,
+          created_at: new Date().toISOString()
+        };
+
+        const { data, error } = await supabase.from('quotes').insert([newQuote]).select().single();
+        if (error) throw error;
+        const savedQuote = data as Quote;
+        notifyTelegram('quote_new', savedQuote);
+        return savedQuote;
+      } catch (err: any) {
+        console.error('Error creating quote in Supabase:', err);
+        throw new Error(`No se pudo guardar la cotización en Supabase: ${err?.message || 'verifica la conexión y las políticas de acceso.'}`);
+      }
+    }
+
+    const all = LocalStorageDB.getQuotes();
+    const lastNum = all.reduce((highest, existingQuote) => {
+      const match = existingQuote.folio.match(new RegExp(`^QT-${currentYear}-(\\d+)$`));
+      return Math.max(highest, Number(match?.[1] || 0));
+    }, 0);
+    const folio = `QT-${currentYear}-${(lastNum + 1).toString().padStart(3, '0')}`;
     const newQuote: Quote = {
       ...quote,
       id: 'q-' + Math.random().toString(36).substr(2, 9),
       folio,
       created_at: new Date().toISOString()
     };
-
-    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
-      try {
-        const { error } = await supabase.from('quotes').insert([newQuote]);
-        if (!error) {
-          notifyTelegram('quote_new', newQuote);
-          return newQuote;
-        }
-      } catch (err) {
-        console.error('Error creating quote in Supabase, trying fallback...', err);
-      }
-    }
-
-    // Since we fetched all earlier, insert at beginning to keep sorted or just push
     all.unshift(newQuote);
     LocalStorageDB.saveQuotes(all);
     return newQuote;
