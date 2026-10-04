@@ -1202,6 +1202,57 @@ export const AppService = {
     return newReceipt;
   },
 
+  async uploadPaymentReceipt(file: File): Promise<{ receipt_path?: string; receipt_url?: string }> {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('El comprobante debe ser una imagen JPEG, PNG o WebP.');
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error('El comprobante no puede superar 10 MB.');
+    }
+
+    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user) throw new Error('Debes iniciar sesión para subir un comprobante.');
+
+      const extensionByType: Record<string, string> = {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp'
+      };
+      const receiptPath = `${user.id}/${crypto.randomUUID()}.${extensionByType[file.type]}`;
+      const { error } = await supabase.storage
+        .from('payment-receipts')
+        .upload(receiptPath, file, { contentType: file.type, upsert: false });
+      if (error) throw error;
+      return { receipt_path: receiptPath };
+    }
+
+    const receiptUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') resolve(reader.result);
+        else reject(new Error('No se pudo leer el comprobante.'));
+      };
+      reader.onerror = () => reject(reader.error || new Error('No se pudo leer el comprobante.'));
+      reader.readAsDataURL(file);
+    });
+    return { receipt_url: receiptUrl };
+  },
+
+  async getPaymentReceiptUrl(receipt: PaymentReceipt): Promise<string | null> {
+    if (receipt.receipt_path) {
+      if (!supabase) throw new Error('No hay conexión con Supabase para consultar el comprobante.');
+      const { data, error } = await supabase.storage
+        .from('payment-receipts')
+        .createSignedUrl(receipt.receipt_path, 300);
+      if (error) throw error;
+      return data.signedUrl;
+    }
+    return receipt.receipt_url || null;
+  },
+
   // NOTE: this write is security-sensitive (approving/rejecting money received).
   // The real enforcement lives in the DB via RLS ("Only super admin updates payment
   // receipts"), so even if this were called by a non-super_admin the database itself
@@ -1903,6 +1954,26 @@ export const AppService = {
 export const SUPABASE_SQL_BLUEPRINT = `-- SQL Script to run in your Supabase SQL Editor
 -- This configures all tables, initial seed data, RLS (Row Level Security) rules, and Storage Buckets automatically.
 
+-- Stop before changing anything if the private receipts bucket already exists.
+DO $$
+DECLARE
+  existing_bucket storage.buckets%ROWTYPE;
+BEGIN
+  SELECT * INTO existing_bucket
+  FROM storage.buckets
+  WHERE id = 'payment-receipts';
+  IF FOUND THEN
+    RAISE EXCEPTION 'Bucket payment-receipts already exists; inspect its configuration before continuing.'
+      USING DETAIL = format(
+        'name=%s, public=%s, file_size_limit=%s, allowed_mime_types=%s',
+        existing_bucket.name,
+        existing_bucket.public,
+        existing_bucket.file_size_limit,
+        existing_bucket.allowed_mime_types
+      );
+  END IF;
+END $$;
+
 -- ==========================================
 -- 1. Create Core Application Tables
 -- ==========================================
@@ -2054,6 +2125,7 @@ CREATE TABLE IF NOT EXISTS public.payment_receipts (
     status TEXT CHECK (status IN ('pending', 'verified', 'rejected')) DEFAULT 'pending' NOT NULL,
     notes TEXT
 );
+ALTER TABLE public.payment_receipts ADD COLUMN IF NOT EXISTS receipt_path TEXT;
 
 -- 1.10. Create VENDORS Table
 -- Tracks external vendors/providers (florista, foto, pastel, dj, etc.) hired by a client
@@ -2135,6 +2207,24 @@ RETURNS BOOLEAN LANGUAGE SQL SECURITY DEFINER STABLE
 AS $$
   SELECT COALESCE((SELECT role IN ('admin', 'super_admin') FROM public.profiles WHERE id = auth.uid()), false);
 $$;
+
+-- Storage-specific role check: tightly scoped execution and a fixed empty search_path.
+CREATE OR REPLACE FUNCTION public.is_storage_admin()
+RETURNS BOOLEAN
+LANGUAGE SQL
+SECURITY DEFINER
+STABLE
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE id = auth.uid()
+      AND role IN ('admin', 'super_admin')
+  );
+$$;
+REVOKE ALL ON FUNCTION public.is_storage_admin() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_storage_admin() TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.is_super_admin()
 RETURNS BOOLEAN LANGUAGE SQL SECURITY DEFINER STABLE
@@ -2373,42 +2463,64 @@ CREATE POLICY "Admins full access to rate catalog" ON public.rate_catalog
 
 
 -- ==========================================
--- 5. Set up Storage Bucket & Policies
+-- 5. Set up Storage Buckets & Policies
 -- ==========================================
 
--- 5.1. Create 'event-assets' bucket (inserts if not already present)
+-- 5.1. Keep public assets public; the private receipts bucket is created only once.
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('event-assets', 'event-assets', true)
 ON CONFLICT (id) DO NOTHING;
 
--- 5.2. Clear existing policies to avoid duplications or conflicts
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'payment-receipts',
+  'payment-receipts',
+  false,
+  10485760,
+  ARRAY['image/jpeg', 'image/png', 'image/webp']
+);
+
+-- 5.2. Replace broad event-assets write policies and create scoped private-bucket policies.
 DROP POLICY IF EXISTS "Public Read Access" ON storage.objects;
 DROP POLICY IF EXISTS "Authenticated Users Upload" ON storage.objects;
 DROP POLICY IF EXISTS "Authenticated Users Update" ON storage.objects;
 DROP POLICY IF EXISTS "Authenticated Users Delete" ON storage.objects;
+DROP POLICY IF EXISTS "Public read event assets" ON storage.objects;
+DROP POLICY IF EXISTS "Admins upload event assets" ON storage.objects;
+DROP POLICY IF EXISTS "Clients upload own payment receipts" ON storage.objects;
+DROP POLICY IF EXISTS "Owners and admins read payment receipts" ON storage.objects;
 
--- 5.3. Policy: Allow anyone (Public) to read files from 'event-assets'
-CREATE POLICY "Public Read Access"
+-- Public assets remain readable, but only admins may add new objects.
+CREATE POLICY "Public read event assets"
 ON storage.objects FOR SELECT
+TO anon, authenticated
 USING (bucket_id = 'event-assets');
 
--- 5.4. Policy: Allow authenticated users to upload files
-CREATE POLICY "Authenticated Users Upload"
+CREATE POLICY "Admins upload event assets"
 ON storage.objects FOR INSERT
 TO authenticated
-WITH CHECK (bucket_id = 'event-assets');
+WITH CHECK (bucket_id = 'event-assets' AND public.is_storage_admin());
 
--- 5.5. Policy: Allow authenticated users to update their files
-CREATE POLICY "Authenticated Users Update"
-ON storage.objects FOR UPDATE
+CREATE POLICY "Clients upload own payment receipts"
+ON storage.objects FOR INSERT
 TO authenticated
-USING (bucket_id = 'event-assets');
+WITH CHECK (
+  bucket_id = 'payment-receipts'
+  AND cardinality(storage.foldername(name)) = 1
+  AND (storage.foldername(name))[1] = auth.uid()::text
+);
 
--- 5.6. Policy: Allow authenticated users to delete files
-CREATE POLICY "Authenticated Users Delete"
-ON storage.objects FOR DELETE
+CREATE POLICY "Owners and admins read payment receipts"
+ON storage.objects FOR SELECT
 TO authenticated
-USING (bucket_id = 'event-assets');
+USING (
+  bucket_id = 'payment-receipts'
+  AND (
+    (cardinality(storage.foldername(name)) = 1
+      AND (storage.foldername(name))[1] = auth.uid()::text)
+    OR public.is_storage_admin()
+  )
+);
 
 -- ==========================================
 -- 6. ONE-TIME BOOTSTRAP: Set your first Super Admin

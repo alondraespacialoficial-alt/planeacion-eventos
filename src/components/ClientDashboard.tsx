@@ -81,6 +81,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
   const [payRef, setPayRef] = useState('');
   const [payConcept, setPayConcept] = useState('');
   const [payProofUrl, setPayProofUrl] = useState('');
+  const [payProofPath, setPayProofPath] = useState('');
   const [uploadingProof, setUploadingProof] = useState(false);
 
   // Vendor Modal State
@@ -210,14 +211,38 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
     if (!file) return;
     setUploadingProof(true);
     try {
-      const url = await AppService.uploadMedia(file);
-      setPayProofUrl(url);
+      const uploaded = await AppService.uploadPaymentReceipt(file);
+      setPayProofPath(uploaded.receipt_path || '');
+      setPayProofUrl(uploaded.receipt_url || '');
       showToast('Comprobante cargado correctamente.', 'success');
     } catch (err) {
-      showToast('Error al subir el comprobante.', 'error');
+      showToast(err instanceof Error ? err.message : 'Error al subir el comprobante.', 'error');
     } finally {
       setUploadingProof(false);
     }
+  };
+
+  const handleOpenPaymentReceipt = async (receipt: PaymentReceipt) => {
+    const receiptWindow = window.open('about:blank', '_blank');
+    if (!receiptWindow) {
+      showToast('Permite las ventanas emergentes para abrir el comprobante.', 'error');
+      return;
+    }
+    receiptWindow.opener = null;
+    try {
+      const url = await AppService.getPaymentReceiptUrl(receipt);
+      if (url) receiptWindow.location.href = url;
+      else receiptWindow.close();
+    } catch (err) {
+      receiptWindow.close();
+      showToast(err instanceof Error ? err.message : 'No se pudo abrir el comprobante.', 'error');
+    }
+  };
+
+  const handleClosePaymentModal = () => {
+    setShowPaymentModal(false);
+    setPayProofPath('');
+    setPayProofUrl('');
   };
 
   const handleSubmitPayment = async (e: React.FormEvent) => {
@@ -237,6 +262,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
         payment_method: payMethod,
         reference_code: payRef.trim() || 'SPEI-' + Math.floor(100000 + Math.random() * 900000),
         receipt_url: payProofUrl,
+        receipt_path: payProofPath || undefined,
         concept: payConcept.trim() || `Abono (${payType}) registrado por cliente`
       });
       setPayments(prev => [created, ...prev]);
@@ -245,6 +271,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
       setPayRef('');
       setPayConcept('');
       setPayProofUrl('');
+      setPayProofPath('');
       showToast('¡Comprobante enviado a verificación con éxito!', 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Error al registrar el pago.', 'error');
@@ -1256,7 +1283,15 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                               ${p.amount.toLocaleString('es-MX')} MXN
                             </td>
                             <td className="py-4 px-6 text-center">
-                              {p.receipt_url ? (
+                              {p.receipt_path ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleOpenPaymentReceipt(p)}
+                                  className="text-amber-400 hover:underline font-mono text-[11px] inline-flex items-center gap-1"
+                                >
+                                  <ExternalLink className="w-3 h-3" /> Ver Adjunto
+                                </button>
+                              ) : p.receipt_url ? (
                                 <a
                                   href={p.receipt_url}
                                   target="_blank"
@@ -1519,7 +1554,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
           >
             <div className="flex justify-between items-center pb-4 border-b border-gray-800 mb-6">
               <h3 className="font-serif text-xl text-amber-400">Registrar Comprobante de Pago</h3>
-              <button onClick={() => setShowPaymentModal(false)} className="text-gray-500 hover:text-white font-mono text-xs">✕</button>
+              <button onClick={handleClosePaymentModal} className="text-gray-500 hover:text-white font-mono text-xs">✕</button>
             </div>
 
             <form onSubmit={handleSubmitPayment} className="space-y-4">
@@ -1579,13 +1614,13 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                 <div className="flex items-center gap-3">
                   <input 
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp"
                     onChange={handleUploadPaymentProof}
                     className="text-xs text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-mono file:bg-amber-500/10 file:text-amber-400 hover:file:bg-amber-500/20"
                   />
                   {uploadingProof && <span className="text-xs text-amber-400 font-mono animate-pulse">Subiendo...</span>}
                 </div>
-                {payProofUrl && (
+                {(payProofUrl || payProofPath) && (
                   <p className="text-[10px] text-emerald-400 font-mono mt-1">✓ Comprobante cargado correctamente</p>
                 )}
               </div>
@@ -1604,7 +1639,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
               <div className="pt-4 flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowPaymentModal(false)}
+                  onClick={handleClosePaymentModal}
                   className="px-5 py-2.5 rounded-xl border border-gray-800 text-gray-400 text-xs font-mono hover:text-white"
                 >
                   Cancelar

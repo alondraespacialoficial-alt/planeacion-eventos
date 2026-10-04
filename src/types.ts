@@ -60,7 +60,8 @@ export interface PaymentReceipt {
   payment_method: 'transferencia' | 'efectivo' | 'tarjeta';
   concept: string;
   reference_code: string;
-  receipt_url?: string; // base64 or photo URL
+  receipt_url?: string; // Legacy public URL or local data URL
+  receipt_path?: string;
   status: 'pending' | 'verified' | 'rejected';
   notes?: string;
 }

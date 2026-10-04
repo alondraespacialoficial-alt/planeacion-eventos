@@ -97,6 +97,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'pending' | 'verified' | 'rejected'>('all');
   const [selectedPaymentModal, setSelectedPaymentModal] = useState<PaymentReceipt | null>(null);
   const [adminPaymentNoteInput, setAdminPaymentNoteInput] = useState('');
+  const [paymentReceiptPreviewUrl, setPaymentReceiptPreviewUrl] = useState<string | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [landingConfig, setLandingConfig] = useState<LandingConfig>({
@@ -358,6 +359,23 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   };
 
   // Handler for Admin Supremo verifying/updating payment receipt status
+  const handleViewPaymentReceipt = async (receipt: PaymentReceipt) => {
+    try {
+      const receiptUrl = await AppService.getPaymentReceiptUrl(receipt);
+      if (!receiptUrl) return;
+      setPaymentReceiptPreviewUrl(receiptUrl);
+      setSelectedPaymentModal(receipt);
+      setAdminPaymentNoteInput(receipt.notes || '');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'No se pudo abrir el comprobante.', 'error');
+    }
+  };
+
+  const handleClosePaymentReceipt = () => {
+    setSelectedPaymentModal(null);
+    setPaymentReceiptPreviewUrl(null);
+  };
+
   const handleUpdatePaymentStatus = async (paymentId: string, status: 'verified' | 'rejected' | 'pending', notes?: string) => {
     try {
       const updated = await AppService.updatePaymentReceiptStatus(paymentId, status, notes);
@@ -2100,12 +2118,9 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                             </td>
 
                             <td className="py-4 px-6 text-center">
-                              {p.receipt_url ? (
+                              {p.receipt_path || p.receipt_url ? (
                                 <button
-                                  onClick={() => {
-                                    setSelectedPaymentModal(p);
-                                    setAdminPaymentNoteInput(p.notes || '');
-                                  }}
+                                  onClick={() => void handleViewPaymentReceipt(p)}
                                   className="px-2.5 py-1.5 rounded-lg bg-gray-900 border border-gray-800 hover:border-amber-500/50 text-amber-400 text-[10px] font-mono font-bold flex items-center gap-1 mx-auto transition-all cursor-pointer"
                                 >
                                   <Eye className="w-3.5 h-3.5" />
@@ -2174,7 +2189,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
               className="bg-[#0d0e12] border border-gray-800 rounded-2xl max-w-2xl w-full p-6 md:p-8 space-y-6 relative shadow-2xl max-h-[90vh] overflow-y-auto"
             >
               <button
-                onClick={() => setSelectedPaymentModal(null)}
+                onClick={handleClosePaymentReceipt}
                 className="absolute top-4 right-4 text-gray-500 hover:text-white font-mono text-sm cursor-pointer"
               >
                 ✕
@@ -2227,16 +2242,16 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                 <label className="block text-[10px] font-mono text-gray-400 uppercase">
                   Ficha / Captura Adjunta por el Cliente:
                 </label>
-                {selectedPaymentModal.receipt_url ? (
+                {paymentReceiptPreviewUrl ? (
                   <div className="border border-gray-800 rounded-xl overflow-hidden bg-black/60 p-2 flex flex-col items-center max-h-80">
                     <img
-                      src={selectedPaymentModal.receipt_url}
+                      src={paymentReceiptPreviewUrl}
                       alt="Comprobante Adjunto"
                       className="max-h-72 w-auto object-contain rounded"
                       referrerPolicy="no-referrer"
                     />
                     <a
-                      href={selectedPaymentModal.receipt_url}
+                      href={paymentReceiptPreviewUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="mt-2 text-[10px] font-mono text-amber-400 hover:underline flex items-center gap-1"
@@ -2269,7 +2284,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
               <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-800">
                 <button
                   type="button"
-                  onClick={() => setSelectedPaymentModal(null)}
+                  onClick={handleClosePaymentReceipt}
                   className="px-4 py-2.5 rounded-xl border border-gray-800 text-gray-400 hover:text-white font-mono text-xs cursor-pointer"
                 >
                   Cerrar
@@ -2281,7 +2296,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                       type="button"
                       onClick={() => {
                         handleUpdatePaymentStatus(selectedPaymentModal.id, 'rejected', adminPaymentNoteInput);
-                        setSelectedPaymentModal(null);
+                        handleClosePaymentReceipt();
                       }}
                       className="px-5 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 hover:bg-red-500 hover:text-white text-red-400 font-mono text-xs font-bold tracking-wider uppercase cursor-pointer"
                     >
@@ -2292,7 +2307,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                       type="button"
                       onClick={() => {
                         handleUpdatePaymentStatus(selectedPaymentModal.id, 'verified', adminPaymentNoteInput);
-                        setSelectedPaymentModal(null);
+                        handleClosePaymentReceipt();
                       }}
                       className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-mono text-xs font-bold tracking-wider uppercase shadow-lg shadow-emerald-500/10 cursor-pointer flex items-center justify-center gap-1.5"
                     >
