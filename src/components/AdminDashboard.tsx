@@ -226,6 +226,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   // MODAL / FORM STATE FOR GALLERY ITEMS (GALERÍA DE PRODUCCIONES)
   // =========================================================
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
+  const [galleryHasMore, setGalleryHasMore] = useState(false);
+  const [loadingMoreGallery, setLoadingMoreGallery] = useState(false);
   const [isGalleryFormOpen, setIsGalleryFormOpen] = useState(false);
   const [editingGalleryId, setEditingGalleryId] = useState<string | null>(null);
 
@@ -268,7 +270,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
           AppService.getServices(),
           AppService.getLandingConfig(),
           AppService.getPaymentReceipts(), // Admin gets all client receipts
-          AppService.getGalleryItems(),
+          AppService.getGalleryItems({ pageSize: 24 }),
           AppService.getRateCatalog()
         ]);
 
@@ -277,7 +279,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
         setLeads(loadedLeads);
         setServices(loadedServices);
         setPayments(loadedPayments || []);
-        setGalleryItems(loadedGalleryItems || []);
+        setGalleryItems(loadedGalleryItems.items || []);
+        setGalleryHasMore(loadedGalleryItems.hasMore);
         setRateCatalog(loadedRateCatalog || []);
         if (loadedConfig) {
           setLandingConfig(loadedConfig);
@@ -1260,6 +1263,19 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     }
   };
 
+  const handleLoadMoreGallery = async () => {
+    setLoadingMoreGallery(true);
+    try {
+      const result = await AppService.getGalleryItems({ offset: galleryItems.length, pageSize: 24 });
+      setGalleryItems(items => [...items, ...result.items]);
+      setGalleryHasMore(result.hasMore);
+    } catch (err: any) {
+      showToast(err?.message ? `Error al cargar más producciones: ${err.message}` : 'Error al cargar más producciones.', 'error');
+    } finally {
+      setLoadingMoreGallery(false);
+    }
+  };
+
   // =========================================================
   // LANDING DESIGN CUSTOMIZATION HANDLER
   // =========================================================
@@ -1458,7 +1474,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
               className={`pb-1 border-b-2 transition-all flex items-center gap-1.5 ${activeTab === 'gallery' ? 'border-amber-500 text-amber-500' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
             >
               <FolderOpen className="w-3.5 h-3.5" />
-              Galería de Producciones ({galleryItems.length})
+              Galería de Producciones ({galleryItems.length}{galleryHasMore ? '+' : ''})
             </button>
           )}
           {isSuperAdmin && (
@@ -1548,7 +1564,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
               {filteredEvents.map(ev => (
                 <div key={ev.id} className="rounded-xl border border-gray-800 bg-[#0d0e12] overflow-hidden flex flex-col justify-between">
                   <div className="h-40 w-full relative">
-                    <img src={ev.cover_url} alt={ev.title} className="w-full h-full object-cover opacity-60" />
+                    <img src={ev.cover_url} alt={ev.title} loading="lazy" decoding="async" className="w-full h-full object-cover opacity-60" />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0d0e12] to-transparent"></div>
                     <span className={`absolute top-3 left-3 px-2 py-0.5 rounded text-[8px] font-mono tracking-widest border font-semibold ${
                       ev.status === 'active' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'
@@ -2493,6 +2509,18 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                 </div>
               ))}
             </div>
+            {galleryHasMore && (
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={handleLoadMoreGallery}
+                  disabled={loadingMoreGallery}
+                  className="px-6 py-3 border border-gray-700 hover:border-amber-500/50 text-gray-300 hover:text-amber-400 text-xs font-mono tracking-widest disabled:opacity-50"
+                >
+                  {loadingMoreGallery ? 'CARGANDO...' : 'CARGAR MÁS PRODUCCIONES'}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -2520,7 +2548,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                     {item.media[0]?.type === 'video' ? (
                       <video src={item.media[0].url} className="w-full h-full object-cover opacity-80" muted />
                     ) : (
-                      <img src={item.media[0]?.url} alt={item.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <img src={item.media[0]?.url} alt={item.title} loading="lazy" decoding="async" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     )}
                     <span className={`absolute top-2 right-2 h-2.5 w-2.5 rounded-full ${item.is_visible ? 'bg-emerald-500' : 'bg-red-500'}`} title={item.is_visible ? 'Visible en Landing' : 'Oculto'} />
                     {item.media.length > 1 && (
@@ -2644,7 +2672,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                       <div className="mt-2 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/60 border border-gray-800">
                         <span className="text-[10px] text-gray-500 uppercase font-mono">Vista Previa:</span>
                         <div className="h-6 w-6 rounded bg-gray-900 border border-gray-800 flex items-center justify-center p-0.5 overflow-hidden">
-                          <img src={landingConfig.logo_url} alt="Logo Preview" className="h-full w-full object-contain" referrerPolicy="no-referrer" />
+                          <img src={landingConfig.logo_url} alt="Logo Preview" loading="lazy" decoding="async" className="h-full w-full object-contain" referrerPolicy="no-referrer" />
                         </div>
                         <span className="text-[10px] text-gray-400 truncate flex-1">{landingConfig.logo_url}</span>
                       </div>
@@ -2698,7 +2726,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                       <div className="mt-2 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/60 border border-gray-800">
                         <span className="text-[10px] text-gray-500 uppercase font-mono">Vista Previa:</span>
                         <div className="h-6 w-10 rounded bg-gray-900 border border-gray-800 flex items-center justify-center overflow-hidden">
-                          <img src={landingConfig.hero_image} alt="Hero Preview" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                          <img src={landingConfig.hero_image} alt="Hero Preview" loading="lazy" decoding="async" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                         </div>
                         <span className="text-[10px] text-gray-400 truncate flex-1">{landingConfig.hero_image}</span>
                       </div>
@@ -2925,7 +2953,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-2">
                     {evtGalleryUrls.map((url, index) => (
                       <div key={index} className="relative aspect-square rounded overflow-hidden border border-gray-800 group">
-                        <img src={url} alt={`Foto galería ${index + 1}`} className="w-full h-full object-cover" />
+                        <img src={url} alt={`Foto galería ${index + 1}`} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                         <button
                           type="button"
                           onClick={() => handleRemoveGalleryImage(index)}
@@ -3397,7 +3425,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                         {m.type === 'video' ? (
                           <video src={m.url} className="w-full h-full object-cover" muted />
                         ) : (
-                          <img src={m.url} alt={`Media ${index + 1}`} className="w-full h-full object-cover" />
+                          <img src={m.url} alt={`Media ${index + 1}`} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                         )}
                         <button
                           type="button"

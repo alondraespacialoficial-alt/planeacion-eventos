@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sparkles, 
@@ -58,6 +58,8 @@ function AdaptiveServiceImage({ src, alt, className, imgClassName }: { src: stri
       <img
         src={src}
         alt={alt}
+        loading="lazy"
+        decoding="async"
         referrerPolicy="no-referrer"
         onLoad={(e) => {
           const img = e.currentTarget;
@@ -90,6 +92,9 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
   const [services, setServices] = useState<Service[]>([]);
   const [showcaseEvents, setShowcaseEvents] = useState<Event[]>([]);
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
+  const [galleryHasMore, setGalleryHasMore] = useState(false);
+  const [galleryLoading, setGalleryLoading] = useState(true);
+  const [galleryLoadingMore, setGalleryLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Form State for Public Quote Form
@@ -111,6 +116,9 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [galleryFilter, setGalleryFilter] = useState<string>('todos');
   const [gallerySearch, setGallerySearch] = useState<string>('');
+  const galleryQueryKey = `${galleryFilter}\u0000${gallerySearch}`;
+  const galleryQueryKeyRef = useRef(galleryQueryKey);
+  galleryQueryKeyRef.current = galleryQueryKey;
   const [activeGalleryItem, setActiveGalleryItem] = useState<GalleryItem | null>(null);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [activeServiceDetail, setActiveServiceDetail] = useState<{ title: string; description: string; image_url?: string; price: string; categoryLabel?: string } | null>(null);
@@ -134,19 +142,6 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
   const calculatedWaiters = getWaitersCount(guestsCount);
   const calculatedWaitersTotal = calculatedWaiters * WAITER_COST;
   const totalPreliminar = calculatedFoodTotal + calculatedWaitersTotal;
-
-  // Filtro combinado de la galería: por categoría (tabs) y por texto libre (nombre, lugar, descripción)
-  const filteredGalleryItems = galleryItems
-    .filter(item => galleryFilter === 'todos' || item.category === galleryFilter)
-    .filter(item => {
-      const query = gallerySearch.trim().toLowerCase();
-      if (!query) return true;
-      return (
-        item.title.toLowerCase().includes(query) ||
-        item.location.toLowerCase().includes(query) ||
-        item.description.toLowerCase().includes(query)
-      );
-    });
 
   // Buscador rápido del hero (visitantes sin sesión): filtra el catálogo de servicios por título/descripción
   const quickServiceResults = quickServiceSearch.trim()
@@ -197,8 +192,6 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         setServices(loadedServices.filter(s => s.is_visible));
         const loadedShowcase = await AppService.getPublicShowcaseEvents();
         setShowcaseEvents(loadedShowcase);
-        const loadedGalleryItems = await AppService.getGalleryItems();
-        setGalleryItems(loadedGalleryItems.filter(g => g.is_visible));
       } catch (err) {
         console.error('Error loading landing page data', err);
       } finally {
@@ -207,6 +200,62 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
     }
     loadData();
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    setGalleryLoading(true);
+    setGalleryHasMore(false);
+    const timer = window.setTimeout(async () => {
+      try {
+        const result = await AppService.getGalleryItems({
+          offset: 0,
+          pageSize: 12,
+          visibleOnly: true,
+          category: galleryFilter,
+          search: gallerySearch,
+        });
+        if (active) {
+          setGalleryItems(result.items);
+          setGalleryHasMore(result.hasMore);
+        }
+      } catch (err) {
+        console.error('Error loading public gallery page', err);
+        if (active) {
+          setGalleryItems([]);
+          setGalleryHasMore(false);
+        }
+      } finally {
+        if (active) setGalleryLoading(false);
+      }
+    }, gallerySearch.trim() ? 250 : 0);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [galleryFilter, gallerySearch]);
+
+  const handleLoadMoreGallery = async () => {
+    const requestKey = galleryQueryKey;
+    setGalleryLoadingMore(true);
+    try {
+      const result = await AppService.getGalleryItems({
+        offset: galleryItems.length,
+        pageSize: 12,
+        visibleOnly: true,
+        category: galleryFilter,
+        search: gallerySearch,
+      });
+      if (galleryQueryKeyRef.current === requestKey) {
+        setGalleryItems(items => [...items, ...result.items]);
+        setGalleryHasMore(result.hasMore);
+      }
+    } catch (err) {
+      console.error('Error loading more public gallery items', err);
+    } finally {
+      setGalleryLoadingMore(false);
+    }
+  };
 
   const handleServiceSelect = (serviceTitle: string) => {
     setQuoteForm(prev => {
@@ -450,10 +499,20 @@ ${extraStr}`;
       </header>
 
       {/* Hero section with dynamic customizable background image */}
-      <section 
-        className="relative min-h-[85vh] flex items-center px-6 py-20 overflow-hidden bg-cover bg-center"
-        style={{ backgroundImage: `linear-gradient(to bottom, rgba(7, 8, 10, 0.92) 15%, rgba(7, 8, 10, 0.7) 50%, rgba(7, 8, 10, 0.98) 100%), url(${config.hero_image})` }}
-      >
+      <section className="relative min-h-[85vh] flex items-center px-6 py-20 overflow-hidden">
+        <img
+          src={config.hero_image}
+          alt=""
+          aria-hidden="true"
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover object-center"
+        />
+        <div
+          className="absolute inset-0"
+          style={{ backgroundImage: 'linear-gradient(to bottom, rgba(7, 8, 10, 0.92) 15%, rgba(7, 8, 10, 0.7) 50%, rgba(7, 8, 10, 0.98) 100%)' }}
+        />
         <div className="max-w-7xl mx-auto w-full grid lg:grid-cols-12 gap-12 items-center relative z-10">
           <div className="lg:col-span-7 text-left">
             <motion.div 
@@ -619,7 +678,7 @@ ${extraStr}`;
                     {evt.cover_type === 'video' ? (
                       <video muted loop autoPlay playsInline className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700" src={evt.cover_url} />
                     ) : (
-                      <img src={evt.cover_url} alt={evt.title} className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700" referrerPolicy="no-referrer" />
+                      <img src={evt.cover_url} alt={evt.title} loading="lazy" decoding="async" className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700" referrerPolicy="no-referrer" />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0d0e11] via-transparent to-transparent"></div>
                   </div>
@@ -648,6 +707,8 @@ ${extraStr}`;
             <img 
               src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=800" 
               alt="Quiénes Somos Celebra tu Evento" 
+              loading="lazy"
+              decoding="async"
               className="rounded-lg shadow-2xl border border-gray-800/80 w-full object-cover aspect-[4/5]"
             />
           </div>
@@ -836,7 +897,7 @@ ${extraStr}`;
 
           {/* Gallery Items Grid */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredGalleryItems.map(item => (
+            {galleryItems.map(item => (
               <motion.div
                 key={item.id}
                 layout
@@ -863,6 +924,8 @@ ${extraStr}`;
                     <img 
                       src={item.media[0]?.url} 
                       alt={item.title} 
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-85" 
                       referrerPolicy="no-referrer"
                     />
@@ -898,10 +961,22 @@ ${extraStr}`;
             ))}
           </div>
 
-          {filteredGalleryItems.length === 0 && (
+          {!galleryLoading && galleryItems.length === 0 && (
             <p className="text-center text-gray-500 text-xs font-mono mt-10">
               No encontramos producciones que coincidan con tu búsqueda.
             </p>
+          )}
+          {galleryHasMore && (
+            <div className="text-center mt-10">
+              <button
+                type="button"
+                onClick={handleLoadMoreGallery}
+                disabled={galleryLoadingMore || galleryLoading}
+                className="px-6 py-3 border border-gray-700 hover:border-amber-500/50 text-gray-300 hover:text-amber-400 text-xs font-mono tracking-widest disabled:opacity-50"
+              >
+                {galleryLoadingMore ? 'CARGANDO...' : 'CARGAR MÁS PRODUCCIONES'}
+              </button>
+            </div>
           )}
         </div>
       </section>
@@ -960,6 +1035,8 @@ ${extraStr}`;
                     key={activeGalleryItem.media[activeMediaIndex].url}
                     src={activeGalleryItem.media[activeMediaIndex].url} 
                     alt={activeGalleryItem.title} 
+                    loading="eager"
+                    decoding="async"
                     className="max-h-full max-w-full w-auto h-auto object-contain rounded-lg" 
                     referrerPolicy="no-referrer" 
                   />
@@ -985,25 +1062,6 @@ ${extraStr}`;
                 )}
               </div>
 
-              {activeGalleryItem.media.length > 1 && (
-                <div className="flex gap-2 p-3 border-t border-gray-800 bg-black/30 overflow-x-auto">
-                  {activeGalleryItem.media.map((m, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setActiveMediaIndex(i)}
-                      className={`shrink-0 h-14 w-20 rounded-lg overflow-hidden border-2 transition-colors ${
-                        i === activeMediaIndex ? 'border-amber-500' : 'border-transparent opacity-60 hover:opacity-100'
-                      }`}
-                    >
-                      {m.type === 'video' ? (
-                        <video src={m.url} className="w-full h-full object-cover" muted />
-                      ) : (
-                        <img src={m.url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           </motion.div>
         )}

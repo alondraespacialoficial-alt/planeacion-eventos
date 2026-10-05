@@ -1609,15 +1609,40 @@ export const AppService = {
   },
 
   // --- GALLERY / PORTFOLIO ITEMS (SHOWCASE DE PRODUCCIONES, ADMIN-EDITABLE) ---
-  async getGalleryItems(): Promise<GalleryItem[]> {
+  async getGalleryItems(options?: {
+    offset?: number;
+    pageSize?: number;
+    visibleOnly?: boolean;
+    category?: string;
+    search?: string;
+  }): Promise<{ items: GalleryItem[]; hasMore: boolean }> {
+    const offset = Math.max(0, Math.floor(options?.offset || 0));
+    const pageSize = options?.pageSize === undefined ? undefined : Math.max(1, Math.floor(options.pageSize));
+    const search = options?.search
+      ?.replace(/[^\p{L}\p{N}\s-]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 80);
+    const columns = 'id,created_at,category,category_label,title,location,description,media,is_visible';
+
     if (isSupabaseConfigured && supabase && supabaseTablesExist) {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('gallery_items')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (!error && data) {
-          return (data as any[]).map(row => ({
+          .select(columns)
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: true });
+        if (options?.visibleOnly) query = query.eq('is_visible', true);
+        if (options?.category && options.category !== 'todos') query = query.eq('category', options.category);
+        if (search) {
+          query = query.or(`title.ilike.%${search}%,location.ilike.%${search}%,description.ilike.%${search}%`);
+        }
+        if (pageSize !== undefined) query = query.range(offset, offset + pageSize);
+
+        const { data, error } = await query;
+        if (error) throw error;
+        if (data) {
+          const items = (data as any[]).map(row => ({
             id: row.id,
             created_at: row.created_at,
             category: row.category,
@@ -1628,12 +1653,30 @@ export const AppService = {
             media: row.media || [],
             is_visible: row.is_visible
           })) as GalleryItem[];
+          return {
+            items: pageSize === undefined ? items : items.slice(0, pageSize),
+            hasMore: pageSize !== undefined && items.length > pageSize,
+          };
         }
       } catch (err) {
         console.error('Error fetching gallery items from Supabase, trying fallback...', err);
       }
     }
-    return LocalStorageDB.getGalleryItems();
+
+    let items = LocalStorageDB.getGalleryItems();
+    if (options?.visibleOnly) items = items.filter(item => item.is_visible);
+    if (options?.category && options.category !== 'todos') items = items.filter(item => item.category === options.category);
+    if (search) {
+      const normalizedSearch = search.toLowerCase();
+      items = items.filter(item =>
+        `${item.title} ${item.location} ${item.description}`.toLowerCase().includes(normalizedSearch)
+      );
+    }
+    const page = pageSize === undefined ? items : items.slice(offset, offset + pageSize + 1);
+    return {
+      items: pageSize === undefined ? page : page.slice(0, pageSize),
+      hasMore: pageSize !== undefined && page.length > pageSize,
+    };
   },
 
   async saveGalleryItem(item: Omit<GalleryItem, 'id'> & { id?: string }): Promise<GalleryItem> {

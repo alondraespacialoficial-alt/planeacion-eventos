@@ -250,6 +250,9 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
             className="absolute inset-0 w-full h-full object-cover opacity-55 scale-105"
             src={event.cover_url}
             alt={event.title}
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
             referrerPolicy="no-referrer"
           />
         )}
@@ -343,6 +346,8 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
                 <img 
                   src={url} 
                   alt={`Momento ${index + 1}`} 
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
                   referrerPolicy="no-referrer"
                 />
@@ -464,6 +469,8 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
                 <img
                   src="https://eztuwxavcvqingoycorg.supabase.co/storage/v1/object/public/event-assets/Gemini_Generated_Image_o5x1h9o5x1h9o5x1.jpg"
                   alt="Mapa referencial"
+                  loading="lazy"
+                  decoding="async"
                   className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-300"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/20" />
