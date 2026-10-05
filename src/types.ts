@@ -26,6 +26,7 @@ export interface Event {
   itinerary?: { time: string; label: string }[]; // línea de tiempo del evento (ceremonia, cóctel, recepción...)
   restrictions_note?: string; // ej. "Evento solo para adultos" o "No incluye mascotas"
   rsvp_deadline: string;
+  max_plus_ones?: number; // límite configurable por evento; el máximo global actual es 10
   status: 'active' | 'closed' | 'archived'; // active, closed, archived
   created_by: string; // user id
   client_email: string; // associated client email

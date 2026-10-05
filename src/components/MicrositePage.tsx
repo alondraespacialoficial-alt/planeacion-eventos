@@ -212,6 +212,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
 
   const isEventClosed = event.status !== 'active';
   const rsvpDeadlinePassed = new Date() > new Date(`${event.rsvp_deadline}T23:59:59`);
+  const rsvpPlusOnesLimit = Math.min(10, event.max_plus_ones ?? 10);
   const mapsSearchUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location_name + ' ' + event.location_address)}`;
   // Links normales de Google Maps (no de la API de Embed) son rechazados al intentar iframearlos ("google.com rechazó la conexión")
   const isValidMapEmbedUrl = !!event.map_embed_url && event.map_embed_url.includes('/maps/embed');
@@ -771,7 +772,8 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
                     </div>
                     <button
                       type="button"
-                      onClick={() => setPlusOnes(plusOnes + 1)}
+                      onClick={() => setPlusOnes(Math.min(rsvpPlusOnesLimit, plusOnes + 1))}
+                      disabled={plusOnes >= rsvpPlusOnesLimit}
                       className="w-10 h-10 rounded-lg border border-gray-800 bg-[#121317] flex items-center justify-center text-lg hover:border-amber-500/40 transition-colors cursor-pointer"
                     >
                       +

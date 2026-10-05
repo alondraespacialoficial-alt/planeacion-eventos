@@ -242,8 +242,9 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         event_type: quoteForm.event_type,
         event_date: quoteForm.event_date || 'Sin fecha fija',
         estimated_budget: quoteForm.estimated_budget,
-        services_selected: quoteForm.selected_services.length > 0 ? quoteForm.selected_services : ['Información General'],
-        guests_count: guestsCount
+        services_selected: quoteForm.selected_services,
+        guests_count: guestsCount,
+        consent_privacy: quoteForm.consent
       });
 
       // 2. Build structured WhatsApp message

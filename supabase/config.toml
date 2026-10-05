@@ -1,0 +1,5 @@
+[functions.public-submissions]
+verify_jwt = false
+
+[functions.telegram-notify]
+verify_jwt = true

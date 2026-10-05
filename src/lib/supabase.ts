@@ -687,7 +687,6 @@ class LocalStorageDB {
 }
 
 type TelegramNotifyEvent =
-  | 'lead_new'
   | 'lead_status_changed'
   | 'quote_new'
   | 'quote_status_changed'
@@ -698,7 +697,7 @@ type TelegramNotifyEvent =
 // Fire-and-forget alert to the private super admin Telegram channel (leads/quotes/payments).
 // Telegram is a monitoring add-on, never a critical dependency: it must never throw or
 // block the caller, so failures are swallowed silently here.
-function notifyTelegram(event: TelegramNotifyEvent, payload: Record<string, any>): void {
+function notifyTelegram(event: TelegramNotifyEvent, payload: Record<string, string>): void {
   if (!isSupabaseConfigured || !supabase) return;
   supabase.functions.invoke('telegram-notify', { body: { event, payload } }).catch(() => {});
 }
@@ -1082,46 +1081,37 @@ export const AppService = {
   },
 
   async submitRSVP(rsvp: Omit<RSVP, 'id' | 'created_at'>): Promise<RSVP> {
-    const generatedPass = rsvp.pass_code || ('PASS-' + Math.floor(100000 + Math.random() * 900000));
-    const newRsvp: RSVP = {
-      ...rsvp,
-      pass_code: generatedPass,
-      checked_in: false,
-      id: crypto.randomUUID(),
-      created_at: new Date().toISOString()
-    };
-
-    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
-      try {
-        const { data, error } = await supabase
-          .from('rsvps')
-          .insert([newRsvp]);
-        if (error) throw error;
-        return newRsvp;
-      } catch (err: any) {
-        const supabaseError = {
-          status: err?.status,
-          code: err?.code,
-          message: err?.message,
-          details: err?.details,
-          hint: err?.hint
-        };
-        console.error('Error submitting RSVP to Supabase:', supabaseError);
-
-        // Auth/RLS errors must be visible; saving locally would report a false success.
-        if (err?.status === 401 || err?.status === 403 || err?.code || err?.details || err?.hint) {
-          throw new Error(
-            `Supabase rechazó el RSVP (${err?.status || err?.code || 'error'}): ${err?.message || 'revisa URL, anon key y policies RLS.'}`
-          );
-        }
-      }
+    if (!isSupabaseConfigured || !supabase) {
+      const localRsvp: RSVP = {
+        ...rsvp,
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        pass_code: rsvp.pass_code || `PASS-${100000 + Math.floor(Math.random() * 900000)}`,
+        checked_in: false,
+      };
+      const all = LocalStorageDB.getRSVPs();
+      all.push(localRsvp);
+      LocalStorageDB.saveRSVPs(all);
+      return localRsvp;
     }
-
-    // Fallback Local Storage
-    const all = LocalStorageDB.getRSVPs();
-    all.push(newRsvp);
-    LocalStorageDB.saveRSVPs(all);
-    return newRsvp;
+    const { data, error } = await supabase.functions.invoke('public-submissions', {
+      body: {
+        kind: 'rsvp',
+        data: {
+          event_id: rsvp.event_id,
+          name: rsvp.name,
+          email: rsvp.email,
+          phone: rsvp.phone,
+          attendance: rsvp.attendance,
+          plus_ones: rsvp.plus_ones,
+          notes: rsvp.notes,
+          consent_privacy: rsvp.consent_privacy,
+          consent_terms: rsvp.consent_terms,
+        },
+      },
+    });
+    if (error) throw new Error(`No se pudo registrar el RSVP: ${error.message}`);
+    return data.rsvp as RSVP;
   },
 
   async checkInRSVP(rsvpIdOrPassCode: string, checkedIn: boolean): Promise<RSVP | null> {
@@ -1182,7 +1172,7 @@ export const AppService = {
         const payload = { ...receipt, id: 'pay-' + Math.random().toString(36).substr(2, 9), status: 'pending' as const };
         const { data, error } = await supabase.from('payment_receipts').insert([payload]).select().single();
         if (error) throw error;
-        notifyTelegram('payment_new', data as PaymentReceipt);
+        notifyTelegram('payment_new', { receipt_id: (data as PaymentReceipt).id });
         return data as PaymentReceipt;
       } catch (err: any) {
         console.error('Error submitting payment receipt to Supabase:', err);
@@ -1270,7 +1260,7 @@ export const AppService = {
           .select()
           .maybeSingle();
         if (error) throw error;
-        if (data && status !== 'pending') notifyTelegram('payment_status_changed', data as PaymentReceipt);
+        if (data && status !== 'pending') notifyTelegram('payment_status_changed', { receipt_id: (data as PaymentReceipt).id });
         return data as PaymentReceipt | null;
       } catch (err) {
         console.error('Error updating payment receipt status in Supabase', err);
@@ -1724,30 +1714,38 @@ export const AppService = {
     return LocalStorageDB.getLeads();
   },
 
-  async createLead(lead: Omit<Lead, 'id' | 'created_at' | 'status'>): Promise<Lead> {
-    const newLead: Lead = {
-      ...lead,
-      id: 'lead-' + Math.random().toString(36).substr(2, 9),
-      created_at: new Date().toISOString(),
-      status: 'new'
-    };
-
-    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
-      try {
-        const { error } = await supabase.from('leads').insert([newLead]);
-        if (!error) {
-          notifyTelegram('lead_new', newLead);
-          return newLead;
-        }
-      } catch (err) {
-        console.error('Error creating lead in Supabase, trying fallback...', err);
-      }
+  async createLead(lead: Omit<Lead, 'id' | 'created_at' | 'status'> & { consent_privacy: boolean }): Promise<Lead> {
+    if (!isSupabaseConfigured || !supabase) {
+      const localLead: Lead = {
+        ...lead,
+        services_selected: lead.services_selected.length ? lead.services_selected : ['Información General'],
+        id: 'lead-' + Math.random().toString(36).substr(2, 9),
+        created_at: new Date().toISOString(),
+        status: 'new',
+      };
+      const all = LocalStorageDB.getLeads();
+      all.push(localLead);
+      LocalStorageDB.saveLeads(all);
+      return localLead;
     }
-
-    const all = LocalStorageDB.getLeads();
-    all.push(newLead);
-    LocalStorageDB.saveLeads(all);
-    return newLead;
+    const { data, error } = await supabase.functions.invoke('public-submissions', {
+      body: {
+        kind: 'lead',
+        data: {
+          name: lead.name,
+          phone: lead.phone,
+          city: lead.city,
+          event_type: lead.event_type,
+          event_date: lead.event_date,
+          estimated_budget: lead.estimated_budget,
+          services_selected: lead.services_selected,
+          guests_count: lead.guests_count,
+          consent_privacy: lead.consent_privacy,
+        },
+      },
+    });
+    if (error) throw new Error(`No se pudo registrar la solicitud: ${error.message}`);
+    return { ...lead, ...(data.lead as Pick<Lead, 'id' | 'created_at' | 'status'>) };
   },
 
   async updateLeadStatus(id: string, status: Lead['status']): Promise<Lead | null> {
@@ -1757,7 +1755,7 @@ export const AppService = {
         if (!error) {
           const all = await this.getLeads();
           const updated = all.find(l => l.id === id) || null;
-          if (updated) notifyTelegram('lead_status_changed', updated);
+          if (updated) notifyTelegram('lead_status_changed', { lead_id: id });
           return updated;
         }
       } catch (err) {
@@ -1848,7 +1846,7 @@ export const AppService = {
         const { data, error } = await supabase.from('quotes').insert([newQuote]).select().single();
         if (error) throw error;
         const savedQuote = data as Quote;
-        notifyTelegram('quote_new', savedQuote);
+        notifyTelegram('quote_new', { quote_id: savedQuote.id });
         return savedQuote;
       } catch (err: any) {
         console.error('Error creating quote in Supabase:', err);
@@ -1882,9 +1880,9 @@ export const AppService = {
           const updated = quotes.find(q => q.id === id) || null;
           if (updated) {
             if (updatedFields.status !== undefined) {
-              notifyTelegram('quote_status_changed', updated);
+              notifyTelegram('quote_status_changed', { quote_id: id });
             } else if (updatedFields.total !== undefined || updatedFields.items !== undefined) {
-              notifyTelegram('quote_updated', updated);
+              notifyTelegram('quote_updated', { quote_id: id });
             }
           }
           return updated;
@@ -2002,10 +2000,23 @@ CREATE TABLE IF NOT EXISTS public.eventos (
     itinerary JSONB DEFAULT '[]',
     restrictions_note TEXT,
     rsvp_deadline DATE NOT NULL,
+    max_plus_ones INTEGER NOT NULL DEFAULT 10 CHECK (max_plus_ones BETWEEN 0 AND 300),
     status TEXT CHECK (status IN ('active', 'closed', 'archived')) DEFAULT 'active',
     created_by UUID REFERENCES auth.users(id),
     client_email TEXT NOT NULL
 );
+ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS max_plus_ones INTEGER NOT NULL DEFAULT 10;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'eventos_max_plus_ones_check'
+      AND conrelid = 'public.eventos'::regclass
+  ) THEN
+    ALTER TABLE public.eventos ADD CONSTRAINT eventos_max_plus_ones_check
+      CHECK (max_plus_ones BETWEEN 0 AND 300);
+  END IF;
+END $$;
 
 -- 1.2. Create RSVPS Table
 CREATE TABLE IF NOT EXISTS public.rsvps (
@@ -2051,8 +2062,14 @@ CREATE TABLE IF NOT EXISTS public.leads (
     event_date TEXT NOT NULL,
     estimated_budget TEXT NOT NULL,
     services_selected TEXT[] DEFAULT '{}'::TEXT[],
+    consent_privacy BOOLEAN NOT NULL DEFAULT false,
+    consented_at TIMESTAMP WITH TIME ZONE,
+    privacy_notice_version TEXT,
     status TEXT CHECK (status IN ('new', 'contacted', 'quoted', 'lost')) DEFAULT 'new' NOT NULL
 );
+  ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS consent_privacy BOOLEAN NOT NULL DEFAULT false;
+  ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS consented_at TIMESTAMP WITH TIME ZONE;
+  ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS privacy_notice_version TEXT;
 
 -- 1.5. Create QUOTES Table
 CREATE TABLE IF NOT EXISTS public.quotes (
@@ -2322,8 +2339,6 @@ CREATE POLICY "Admins full access to events" ON public.eventos
 
 -- 4.2. Policies for RSVPS
 DROP POLICY IF EXISTS "Public insert RSVPs" ON public.rsvps;
-CREATE POLICY "Public insert RSVPs" ON public.rsvps
-  FOR INSERT TO anon, authenticated WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Owners read RSVP confirmations" ON public.rsvps;
 CREATE POLICY "Owners read RSVP confirmations" ON public.rsvps
@@ -2351,8 +2366,6 @@ CREATE POLICY "Admins full access to services" ON public.services
 
 -- 4.4. Policies for LEADS
 DROP POLICY IF EXISTS "Public submit lead requests" ON public.leads;
-CREATE POLICY "Public submit lead requests" ON public.leads
-    FOR INSERT WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Admins full access to leads" ON public.leads;
 CREATE POLICY "Admins full access to leads" ON public.leads
