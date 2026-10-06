@@ -5,6 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { Event, RSVP, UserSession, Service, Lead, Quote, LandingConfig, PaymentReceipt, VendorItem, UserProfile, GalleryItem, RateItem } from '../types';
+import { isApprovedQuoteForClient } from './accounting';
 
 // Read configuration from env
 const rawSupabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
@@ -696,10 +697,22 @@ type TelegramNotifyEvent =
 
 // Fire-and-forget alert to the private super admin Telegram channel (leads/quotes/payments).
 // Telegram is a monitoring add-on, never a critical dependency: it must never throw or
-// block the caller, so failures are swallowed silently here.
+// block the caller; delivery failures are logged for observability.
 function notifyTelegram(event: TelegramNotifyEvent, payload: Record<string, string>): void {
   if (!isSupabaseConfigured || !supabase) return;
-  supabase.functions.invoke('telegram-notify', { body: { event, payload } }).catch(() => {});
+  const logFailure = (error: unknown) => {
+    console.error('Telegram notification failed', {
+      event,
+      ...(payload.quote_id ? { quote_id: payload.quote_id } : {}),
+      error: error instanceof Error ? error.message : String(error),
+    });
+  };
+  void supabase.functions.invoke('telegram-notify', { body: { event, payload } })
+    .then(({ data, error }) => {
+      if (error) logFailure(error);
+      else if (data?.error) logFailure(data.error);
+    })
+    .catch(logFailure);
 }
 
 // Slug legible para el link público de un evento (ej. "cumple-luciana-a3f9"). Se genera
@@ -1167,8 +1180,22 @@ export const AppService = {
   },
 
   async submitPaymentReceipt(receipt: Omit<PaymentReceipt, 'id' | 'created_at' | 'status'>): Promise<PaymentReceipt> {
+    if (!receipt.quote_id) {
+      throw new Error('Selecciona una cotización aprobada para registrar el pago.');
+    }
+
     if (isSupabaseConfigured && supabase && supabaseTablesExist) {
       try {
+        const { data: quote, error: quoteError } = await supabase
+          .from('quotes')
+          .select('id, client_email, status')
+          .eq('id', receipt.quote_id)
+          .maybeSingle();
+        if (quoteError) throw quoteError;
+        if (!isApprovedQuoteForClient(quote, receipt.client_email)) {
+          throw new Error('La cotización debe estar aprobada y pertenecer a tu cuenta.');
+        }
+
         const payload = { ...receipt, id: 'pay-' + Math.random().toString(36).substr(2, 9), status: 'pending' as const };
         const { data, error } = await supabase.from('payment_receipts').insert([payload]).select().single();
         if (error) throw error;
@@ -1178,6 +1205,11 @@ export const AppService = {
         console.error('Error submitting payment receipt to Supabase:', err);
         throw new Error(`No se pudo guardar el comprobante en Supabase: ${err?.message || 'verifica la conexión y las políticas de acceso.'}`);
       }
+    }
+
+    const localQuote = LocalStorageDB.getQuotes().find(quote => quote.id === receipt.quote_id);
+    if (!isApprovedQuoteForClient(localQuote, receipt.client_email)) {
+      throw new Error('La cotización debe estar aprobada y pertenecer a tu cuenta.');
     }
 
     const newReceipt: PaymentReceipt = {
@@ -1949,9 +1981,11 @@ export const AppService = {
     if (isSupabaseConfigured && supabase && supabaseTablesExist) {
       try {
         const { error } = await supabase.from('quotes').delete().eq('id', id);
-        if (!error) return true;
+        if (error) throw error;
+        return true;
       } catch (err) {
-        console.error('Error deleting quote in Supabase, trying fallback...', err);
+        console.error('Error deleting quote in Supabase:', err);
+        throw new Error(`No se pudo eliminar la cotización en Supabase: ${err instanceof Error ? err.message : 'verifica la conexión y las políticas de acceso.'}`);
       }
     }
     const all = LocalStorageDB.getQuotes();
@@ -2172,6 +2206,7 @@ CREATE TABLE IF NOT EXISTS public.admin_allowlist (
 CREATE TABLE IF NOT EXISTS public.payment_receipts (
     id TEXT PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  quote_id TEXT,
     event_id TEXT,
     client_id UUID REFERENCES auth.users(id),
     client_name TEXT NOT NULL,
@@ -2186,6 +2221,21 @@ CREATE TABLE IF NOT EXISTS public.payment_receipts (
     notes TEXT
 );
 ALTER TABLE public.payment_receipts ADD COLUMN IF NOT EXISTS receipt_path TEXT;
+ALTER TABLE public.payment_receipts ADD COLUMN IF NOT EXISTS quote_id TEXT;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'payment_receipts_quote_id_fkey'
+      AND conrelid = 'public.payment_receipts'::regclass
+  ) THEN
+    ALTER TABLE public.payment_receipts
+      ADD CONSTRAINT payment_receipts_quote_id_fkey
+      FOREIGN KEY (quote_id) REFERENCES public.quotes(id) ON DELETE RESTRICT;
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS payment_receipts_quote_id_idx
+  ON public.payment_receipts (quote_id);
 
 -- 1.10. Create VENDORS Table
 -- Tracks external vendors/providers (florista, foto, pastel, dj, etc.) hired by a client
@@ -2463,7 +2513,31 @@ CREATE POLICY "Super admin manage allowlist" ON public.admin_allowlist
 DROP POLICY IF EXISTS "Clients submit own payment receipts" ON public.payment_receipts;
 CREATE POLICY "Clients submit own payment receipts" ON public.payment_receipts
     FOR INSERT WITH CHECK (
-        auth.uid() = client_id OR public.is_admin()
+    (
+      public.is_admin()
+      AND (
+        quote_id IS NULL
+        OR EXISTS (
+          SELECT 1 FROM public.quotes q
+          WHERE q.id = payment_receipts.quote_id
+            AND q.status = 'approved'
+            AND lower(q.client_email) = lower(payment_receipts.client_email)
+        )
+      )
+    )
+    OR (
+      NOT public.is_admin()
+      AND auth.uid() = client_id
+      AND lower(client_email) = lower(auth.jwt() ->> 'email')
+      AND quote_id IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM public.quotes q
+        WHERE q.id = payment_receipts.quote_id
+          AND q.status = 'approved'
+          AND lower(q.client_email) = lower(payment_receipts.client_email)
+          AND lower(q.client_email) = lower(auth.jwt() ->> 'email')
+      )
+    )
     );
 
 -- Clients read only their own receipts; admins/super_admins read all (for follow-up with clients).

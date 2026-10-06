@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { Event, RSVP, UserSession, Quote, PaymentReceipt, VendorItem } from '../types';
 import { AppService, isSupabaseConfigured } from '../lib/supabase';
+import { calculateQuoteLedger } from '../lib/accounting';
 
 interface ClientDashboardProps {
   currentUser: UserSession;
@@ -75,6 +76,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
 
   // Payment Upload Modal State
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [payQuoteId, setPayQuoteId] = useState('');
   const [payAmount, setPayAmount] = useState<string>('');
   const [payType, setPayType] = useState<'anticipo' | 'saldo' | 'abono_extra'>('anticipo');
   const [payMethod, setPayMethod] = useState<'transferencia' | 'efectivo' | 'tarjeta'>('transferencia');
@@ -189,21 +191,9 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
   const totalGuestsProjected = confirmedCount + totalPlusOnes;
 
   // Account & Payments Financial Calculations
-  const approvedQuotes = quotes.filter(q => q.status === 'approved');
-  const approvedQuoteTotal = approvedQuotes.reduce((sum, q) => sum + q.total, 0);
-  
-  const totalPaidVerified = payments
-    .filter(p => p.status === 'verified')
-    .reduce((sum, p) => sum + p.amount, 0);
-
-  const totalPaidPending = payments
-    .filter(p => p.status === 'pending')
-    .reduce((sum, p) => sum + p.amount, 0);
-
-  const pendingBalance = Math.max(0, approvedQuoteTotal - totalPaidVerified);
-  const paymentProgressPercent = approvedQuoteTotal > 0
-    ? Math.min(100, Math.round((totalPaidVerified / approvedQuoteTotal) * 100))
-    : 0;
+  const quoteLedger = calculateQuoteLedger(quotes, payments);
+  const approvedQuotes = quoteLedger.quoteBalances.map(balance => balance.quote);
+  const { approvedQuoteTotal, totalPaidVerified, totalPaidPending, pendingBalance, paymentProgressPercent } = quoteLedger;
 
   // --- HANDLERS FOR PAYMENTS ---
   const handleUploadPaymentProof = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -241,8 +231,14 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
 
   const handleClosePaymentModal = () => {
     setShowPaymentModal(false);
+    setPayQuoteId('');
     setPayProofPath('');
     setPayProofUrl('');
+  };
+
+  const handleOpenPaymentModal = () => {
+    setPayQuoteId(approvedQuotes[0]?.id || '');
+    setShowPaymentModal(true);
   };
 
   const handleSubmitPayment = async (e: React.FormEvent) => {
@@ -251,8 +247,12 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
     if (isNaN(numAmount) || numAmount <= 0) {
       return showToast('Ingresa un monto válido.', 'error');
     }
+    if (!payQuoteId) {
+      return showToast('Selecciona una cotización aprobada.', 'error');
+    }
     try {
       const created = await AppService.submitPaymentReceipt({
+        quote_id: payQuoteId,
         event_id: selectedEvent?.id || 'evt-default',
         client_id: currentUser.id || 'client-id',
         client_name: currentUser.name || currentUser.email.split('@')[0],
@@ -1171,7 +1171,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                   </div>
 
                   <button
-                    onClick={() => setShowPaymentModal(true)}
+                    onClick={handleOpenPaymentModal}
                     className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black text-xs font-mono font-bold tracking-wider transition-all duration-300 shadow-lg flex items-center gap-2 cursor-pointer shrink-0"
                     id="btn-upload-payment"
                   >
@@ -1193,6 +1193,11 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                   <div className="bg-[#12141a] border border-emerald-500/20 bg-emerald-500/5 p-5 rounded-2xl">
                     <p className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest mb-1">TOTAL ABONADO VERIFICADO</p>
                     <p className="font-serif text-2xl text-emerald-400 font-semibold">${totalPaidVerified.toLocaleString('es-MX')} <span className="text-xs text-emerald-600 font-mono font-normal">MXN</span></p>
+                    {quoteLedger.unassignedPaidVerified > 0 && (
+                      <p className="text-[10px] text-amber-400 mt-2 font-mono">
+                        ${quoteLedger.unassignedPaidVerified.toLocaleString('es-MX')} MXN sin asignar; no reduce saldos.
+                      </p>
+                    )}
                     {totalPaidPending > 0 && (
                       <p className="text-[10px] text-amber-400 mt-2 font-mono">⏳ ${totalPaidPending.toLocaleString('es-MX')} MXN en revisión</p>
                     )}
@@ -1220,6 +1225,30 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                     ></div>
                   </div>
                 </div>
+
+                <div className="mt-6 border-t border-gray-800/60 pt-5">
+                  <h4 className="text-xs font-mono uppercase tracking-wider text-gray-300 mb-3">Saldo por cotización</h4>
+                  {quoteLedger.quoteBalances.length ? (
+                    <div className="divide-y divide-gray-800/70">
+                      {quoteLedger.quoteBalances.map(({ quote, paidVerified, pendingBalance: quoteBalance, excess }) => (
+                        <div key={quote.id} className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-3 text-xs">
+                          <div>
+                            <p className="text-white font-mono font-bold">{quote.folio}</p>
+                            <p className="text-[10px] text-gray-500">Total aprobado</p>
+                          </div>
+                          <p className="text-gray-300">Total: <span className="font-mono">${quote.total.toLocaleString('es-MX')}</span></p>
+                          <p className="text-emerald-400">Asignado: <span className="font-mono">${paidVerified.toLocaleString('es-MX')}</span></p>
+                          <div className="text-right sm:text-left">
+                            <p className="text-amber-400">Pendiente: <span className="font-mono font-bold">${quoteBalance.toLocaleString('es-MX')}</span></p>
+                            {excess > 0 && <p className="text-[10px] text-gray-500">Excedente de esta cotización: ${excess.toLocaleString('es-MX')}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-500">No hay cotizaciones aprobadas.</p>
+                  )}
+                </div>
               </div>
 
               {/* Payment Receipts History Table */}
@@ -1241,6 +1270,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                         <th className="py-4 px-6">Folio / Referencia</th>
                         <th className="py-4 px-6">Fecha Registro</th>
                         <th className="py-4 px-6">Concepto / Tipo</th>
+                        <th className="py-4 px-6">Cotización</th>
                         <th className="py-4 px-6">Método de Pago</th>
                         <th className="py-4 px-6 text-center">Estatus</th>
                         <th className="py-4 px-6 text-right">Monto</th>
@@ -1260,6 +1290,9 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                             <td className="py-4 px-6">
                               <p className="text-white font-medium capitalize">{p.concept}</p>
                               <p className="text-[10px] font-mono text-gray-500 uppercase">{p.payment_type}</p>
+                            </td>
+                            <td className="py-4 px-6 font-mono text-gray-300">
+                              {quotes.find(quote => quote.id === p.quote_id)?.folio || 'Sin asignar'}
                             </td>
                             <td className="py-4 px-6 font-mono text-gray-400 capitalize">
                               💳 {p.payment_method}
@@ -1308,7 +1341,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={7} className="py-12 text-center text-gray-500">
+                          <td colSpan={8} className="py-12 text-center text-gray-500">
                             <Receipt className="w-8 h-8 text-gray-700 mx-auto mb-2" />
                             <p className="text-xs">Aún no has registrado comprobantes de pago.</p>
                           </td>
@@ -1559,6 +1592,24 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
 
             <form onSubmit={handleSubmitPayment} className="space-y-4">
               <div>
+                <label className="block text-[10px] font-mono text-gray-400 uppercase mb-1">Cotización aprobada*</label>
+                <select
+                  required
+                  value={payQuoteId}
+                  onChange={event => setPayQuoteId(event.target.value)}
+                  className="w-full bg-[#14161c] border border-gray-800 rounded-xl px-3 py-3 text-xs text-white focus:outline-none focus:border-amber-500"
+                >
+                  <option value="" disabled>Selecciona una cotización</option>
+                  {quoteLedger.quoteBalances.map(({ quote, pendingBalance: quoteBalance }) => (
+                    <option key={quote.id} value={quote.id}>
+                      {quote.folio} · ${quote.total.toLocaleString('es-MX')} · saldo ${quoteBalance.toLocaleString('es-MX')}
+                    </option>
+                  ))}
+                </select>
+                {approvedQuotes.length === 0 && <p className="text-[10px] text-amber-400 mt-1">No tienes cotizaciones aprobadas para asociar un pago.</p>}
+              </div>
+
+              <div>
                 <label className="block text-[10px] font-mono text-gray-400 uppercase mb-1">Monto Abonado ($ MXN)*</label>
                 <input 
                   type="number"
@@ -1646,6 +1697,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                 </button>
                 <button
                   type="submit"
+                  disabled={approvedQuotes.length === 0}
                   className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-mono text-xs font-bold"
                 >
                   ENVIAR REGISTRO DE PAGO

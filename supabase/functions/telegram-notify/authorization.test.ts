@@ -16,6 +16,13 @@ test('payment_new requires a client session; status and quote events require sta
   assert.equal(canCallNotifyEvent('quote_updated', 'client', false), false);
 });
 
+test('approved quote status alerts are allowed for admin and super_admin', () => {
+  assert.equal(canCallNotifyEvent('quote_status_changed', 'admin', false), true);
+  assert.equal(canCallNotifyEvent('quote_status_changed', 'super_admin', false), true);
+  assert.equal(canCallNotifyEvent('quote_status_changed', 'client', false), false);
+  assert.equal(recordIdKey('quote_status_changed'), 'quote_id');
+});
+
 test('each event accepts only an identifier for its record type', () => {
   assert.equal(recordIdKey('payment_new'), 'receipt_id');
   assert.equal(recordIdKey('payment_status_changed'), 'receipt_id');

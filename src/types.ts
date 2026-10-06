@@ -52,6 +52,7 @@ export interface RSVP {
 export interface PaymentReceipt {
   id: string;
   created_at: string;
+  quote_id?: string | null;
   event_id?: string;
   client_id: string;
   client_name: string;

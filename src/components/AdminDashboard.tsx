@@ -51,6 +51,7 @@ import {
 } from 'lucide-react';
 import { Event, UserSession, Service, Lead, Quote, QuoteItem, LandingConfig, PaymentReceipt, UserProfile, GalleryItem, RateItem } from '../types';
 import { AppService, isSupabaseConfigured, SUPABASE_SQL_BLUEPRINT } from '../lib/supabase';
+import { calculateQuoteLedger } from '../lib/accounting';
 import { generateQuotePdf, generateQuotePdfBase64 } from '../lib/pdfGenerator';
 
 interface AdminDashboardProps {
@@ -917,7 +918,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
         showToast('Cotización eliminada correctamente.', 'success');
       }
     } catch (err) {
-      showToast('Error al eliminar la cotización.', 'error');
+      showToast(err instanceof Error ? err.message : 'Error al eliminar la cotización.', 'error');
     }
   };
 
@@ -1332,13 +1333,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
 
   const tabuladorCartTotal = tabuladorCart.reduce((sum, c) => sum + (c.unitPrice * c.quantity), 0);
 
-  const verifiedPaymentsByEmail = payments.reduce((totals, payment) => {
-    if (payment.status !== 'verified') return totals;
-    const email = payment.client_email.trim().toLowerCase();
-    totals.set(email, (totals.get(email) || 0) + payment.amount);
-    return totals;
-  }, new Map<string, number>());
-
+  const quoteLedger = calculateQuoteLedger(quotes, payments);
   const pendingPaymentsByEmail = payments.reduce((totals, payment) => {
     if (payment.status !== 'pending') return totals;
     const email = payment.client_email.trim().toLowerCase();
@@ -1346,31 +1341,54 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     return totals;
   }, new Map<string, number>());
 
-  const approvedAccountsByEmail = new Map<string, { email: string; clientName: string; quoteTotal: number }>();
-  quotes.forEach(quote => {
-    if (quote.status !== 'approved') return;
-    const email = quote.client_email.trim().toLowerCase();
-    if (!email) return;
-
-    const account = approvedAccountsByEmail.get(email) || {
-      email,
-      clientName: quote.client_name,
-      quoteTotal: 0
+  type ClientAccount = {
+    email: string;
+    clientName: string;
+    quoteTotal: number;
+    paidVerified: number;
+    unassignedVerified: number;
+    pendingReview: number;
+    pendingBalance: number;
+    quoteBalances: typeof quoteLedger.quoteBalances;
+  };
+  const accountsByEmail = new Map<string, ClientAccount>();
+  const getClientAccount = (email: string, clientName = ''): ClientAccount | null => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) return null;
+    const account = accountsByEmail.get(normalizedEmail) || {
+      email: normalizedEmail,
+      clientName,
+      quoteTotal: 0,
+      paidVerified: 0,
+      unassignedVerified: 0,
+      pendingReview: 0,
+      pendingBalance: 0,
+      quoteBalances: [],
     };
-    account.quoteTotal += quote.total;
-    approvedAccountsByEmail.set(email, account);
+    if (!account.clientName && clientName) account.clientName = clientName;
+    accountsByEmail.set(normalizedEmail, account);
+    return account;
+  };
+
+  quoteLedger.quoteBalances.forEach(balance => {
+    const account = getClientAccount(balance.quote.client_email, balance.quote.client_name);
+    if (!account) return;
+    account.quoteTotal += balance.quote.total;
+    account.paidVerified += balance.paidVerified;
+    account.pendingBalance += balance.pendingBalance;
+    account.quoteBalances.push(balance);
+  });
+  quoteLedger.unassignedPaidByEmail.forEach((amount, email) => {
+    const account = getClientAccount(email);
+    if (account) account.unassignedVerified += amount;
+  });
+  payments.forEach(payment => {
+    if (payment.status !== 'pending') return;
+    const account = getClientAccount(payment.client_email, payment.client_name);
+    if (account) account.pendingReview += payment.amount;
   });
 
-  const clientAccounts = Array.from(approvedAccountsByEmail.values())
-    .map(account => {
-      const paidVerified = verifiedPaymentsByEmail.get(account.email) || 0;
-      return {
-        ...account,
-        paidVerified,
-        pendingReview: pendingPaymentsByEmail.get(account.email) || 0,
-        pendingBalance: Math.max(0, account.quoteTotal - paidVerified)
-      };
-    })
+  const clientAccounts = Array.from(accountsByEmail.values())
     .sort((a, b) => a.clientName.localeCompare(b.clientName, 'es'));
 
   return (
@@ -1951,10 +1969,10 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
             <div className="bg-[#0d0e12] border border-gray-800 rounded-xl overflow-hidden">
               <div className="p-5 border-b border-gray-800">
                 <h4 className="font-serif text-lg text-white">Saldos por Cliente</h4>
-                <p className="text-xs text-gray-500 mt-1">Solo cotizaciones aprobadas; los comprobantes pendientes no reducen el saldo.</p>
+                <p className="text-xs text-gray-500 mt-1">El saldo suma las cotizaciones aprobadas; pagos sin asignar y pendientes se muestran aparte.</p>
               </div>
               {clientAccounts.length === 0 ? (
-                <p className="p-8 text-center text-xs font-mono text-gray-500">Aún no hay cotizaciones aprobadas para calcular saldos.</p>
+                <p className="p-8 text-center text-xs font-mono text-gray-500">Aún no hay cotizaciones aprobadas ni pagos por conciliar.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
@@ -1962,7 +1980,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                       <tr className="bg-black/40 border-b border-gray-800 text-[10px] font-mono text-gray-500 uppercase">
                         <th className="py-3 px-5">Cliente</th>
                         <th className="py-3 px-5 text-right">Total Aprobado</th>
-                        <th className="py-3 px-5 text-right">Pagado Verificado</th>
+                        <th className="py-3 px-5 text-right">Pagado Asignado</th>
+                        <th className="py-3 px-5 text-right">Verificado Sin Asignar</th>
                         <th className="py-3 px-5 text-right">En Revisión</th>
                         <th className="py-3 px-5 text-right">Saldo Pendiente</th>
                       </tr>
@@ -1973,9 +1992,22 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                           <td className="py-3 px-5">
                             <p className="text-white font-medium">{account.clientName || 'Cliente'}</p>
                             <p className="text-[10px] font-mono text-gray-500">{account.email}</p>
+                            {account.quoteBalances.length ? (
+                              <div className="mt-2 space-y-1">
+                                {account.quoteBalances.map(({ quote, paidVerified, pendingBalance, excess }) => (
+                                  <p key={quote.id} className="text-[10px] font-mono text-gray-400">
+                                    {quote.folio}: saldo ${pendingBalance.toLocaleString('es-MX')} · pagado ${paidVerified.toLocaleString('es-MX')}
+                                    {excess > 0 ? ` · excedente propio $${excess.toLocaleString('es-MX')}` : ''}
+                                  </p>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="mt-1 text-[10px] text-gray-500">Sin cotizaciones aprobadas</p>
+                            )}
                           </td>
                           <td className="py-3 px-5 text-right font-mono text-white">${account.quoteTotal.toLocaleString('es-MX')}</td>
                           <td className="py-3 px-5 text-right font-mono text-emerald-400">${account.paidVerified.toLocaleString('es-MX')}</td>
+                          <td className="py-3 px-5 text-right font-mono text-amber-400">${account.unassignedVerified.toLocaleString('es-MX')}</td>
                           <td className="py-3 px-5 text-right font-mono text-amber-400">${account.pendingReview.toLocaleString('es-MX')}</td>
                           <td className="py-3 px-5 text-right font-mono font-bold text-amber-400">${account.pendingBalance.toLocaleString('es-MX')}</td>
                         </tr>
