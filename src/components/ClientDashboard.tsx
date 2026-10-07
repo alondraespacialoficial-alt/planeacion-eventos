@@ -634,33 +634,11 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                   {/* Sidebar stats/files block */}
                   <div className="lg:col-span-4 space-y-6">
                     <div className="bg-[#0d0e12] border border-gray-800 rounded-2xl p-6">
-                      <h4 className="font-serif text-white font-medium text-lg mb-4">Descargas de Archivos</h4>
-                      <p className="text-gray-400 text-xs font-light mb-6">Descarga los documentos relacionados a tu planeación de evento:</p>
-                      
-                      <div className="space-y-3">
-                        <a 
-                          href="#" 
-                          onClick={(e) => { e.preventDefault(); showToast('Iniciando descarga de ficha de planeación técnica...', 'info'); }}
-                          className="flex items-center justify-between p-3 rounded-xl border border-gray-800 bg-black/20 hover:border-amber-500/30 hover:bg-amber-500/5 text-xs transition-colors"
-                        >
-                          <span className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-amber-500" />
-                            Guía_Logistica_Boda.pdf
-                          </span>
-                          <FileDown className="w-4 h-4 text-gray-500" />
-                        </a>
-                        <a 
-                          href="#" 
-                          onClick={(e) => { e.preventDefault(); showToast('Descargando croquis de distribución de mesas...', 'info'); }}
-                          className="flex items-center justify-between p-3 rounded-xl border border-gray-800 bg-black/20 hover:border-amber-500/30 hover:bg-amber-500/5 text-xs transition-colors"
-                        >
-                          <span className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-amber-500" />
-                            Distribucion_Mesas.pdf
-                          </span>
-                          <FileDown className="w-4 h-4 text-gray-500" />
-                        </a>
-                      </div>
+                      <h4 className="font-serif text-white font-medium text-lg mb-4">Documentos de tu Evento</h4>
+                      <p className="text-gray-400 text-xs font-light mb-6">Los archivos compartidos por tu coordinador aparecerán aquí.</p>
+                      <p className="text-gray-500 text-xs font-light border border-gray-800 rounded-xl bg-black/20 p-4 text-center">
+                        Aún no hay documentos disponibles para este evento.
+                      </p>
                     </div>
 
                     <div className="bg-[#0d0e12] border border-gray-800 rounded-2xl p-6 space-y-4">
