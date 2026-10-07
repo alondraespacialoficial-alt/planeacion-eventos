@@ -52,7 +52,7 @@ import {
 import { Event, UserSession, Service, Lead, Quote, QuoteItem, LandingConfig, PaymentReceipt, UserProfile, GalleryItem, RateItem } from '../types';
 import { AppService, isSupabaseConfigured, SUPABASE_SQL_BLUEPRINT } from '../lib/supabase';
 import { calculateQuoteLedger } from '../lib/accounting';
-import { generateQuotePdf, generateQuotePdfBase64 } from '../lib/pdfGenerator';
+import { generateQuotePdf, generateQuotePdfBase64, getQuoteValidityText } from '../lib/pdfGenerator';
 
 interface AdminDashboardProps {
   currentUser: UserSession;
@@ -841,13 +841,14 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     if (quote.status === 'sent' && !window.confirm(`¿Reenviar por correo la cotización ${quote.folio}?`)) return;
     setSendingQuoteId(quote.id);
     try {
-      const pdfBase64 = generateQuotePdfBase64({
+      const pdfBase64 = await generateQuotePdfBase64({
         folio: quote.folio,
         date: new Date(quote.created_at || Date.now()).toLocaleDateString('es-MX'),
         clientName: quote.client_name,
-        clientPhone: quote.client_phone || 'N/A',
+        clientPhone: quote.client_phone || '',
         clientEmail: quote.client_email,
-        eventType: 'Cotización Celebra tu Evento',
+        status: quote.status,
+        validity: getQuoteValidityText(quote.observations, quote.terms),
         items: quote.items.map(item => ({
           description: item.description,
           price: item.price,
@@ -864,8 +865,6 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
         observations: quote.observations,
         terms: quote.terms,
         logoUrl: landingConfig.logo_url,
-        businessAddress: landingConfig.business_address,
-        whatsappPhone: landingConfig.whatsapp_phone
       });
       await AppService.sendQuoteEmail(quote.id, pdfBase64);
       setQuotes(prev => prev.map(item => item.id === quote.id ? { ...item, status: 'sent' } : item));
@@ -1728,9 +1727,10 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                               folio: q.folio,
                               date: new Date(q.created_at || Date.now()).toLocaleDateString('es-MX'),
                               clientName: q.client_name,
-                              clientPhone: q.client_phone || 'N/A',
+                              clientPhone: q.client_phone || '',
                               clientEmail: q.client_email,
-                              eventType: 'Cotización Celebra tu Evento',
+                              status: q.status,
+                              validity: getQuoteValidityText(q.observations, q.terms),
                               items: q.items.map(i => ({ description: i.description, price: i.price, quantity: i.quantity, discount: i.discount })),
                               subtotal: q.subtotal,
                               discountTotal: q.discount_total,
@@ -1739,9 +1739,9 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                               discountPercent: q.discount_percent,
                               percentDiscountTotal: q.percent_discount_total,
                               total: q.total,
-                              observations: q.notes,
-                              whatsappPhone: landingConfig.whatsapp_phone,
-                              businessAddress: landingConfig.business_address
+                              observations: q.observations,
+                              terms: q.terms,
+                              logoUrl: landingConfig.logo_url
                             })}
                             className="p-1.5 hover:bg-amber-500/10 text-amber-500 rounded"
                             title="Descargar PDF de Cotización"

@@ -355,11 +355,12 @@ ${extraStr}`;
     generateQuotePdf({
       folio: lastSubmittedFolio,
       date: today,
-      clientName: quoteForm.name || 'Cliente Celebra tu Evento',
-      clientPhone: quoteForm.phone || 'N/A',
-      city: quoteForm.city || 'CDMX',
-      eventType: quoteForm.event_type || 'Evento Especial',
-      eventDate: quoteForm.event_date || 'Por confirmar',
+      clientName: quoteForm.name || '',
+      clientPhone: quoteForm.phone || '',
+      city: quoteForm.city || undefined,
+      eventType: quoteForm.event_type || undefined,
+      eventDate: quoteForm.event_date || undefined,
+      validity: '15 días hábiles',
       guestsCount: guestsCount,
       items: items,
       subtotal: subtotal,
@@ -367,8 +368,7 @@ ${extraStr}`;
       total: subtotal,
       observations: `Estimación automática (alimentos + personal) para ${guestsCount} asistentes. ${extraNote} Los valores son aproximados y funcionan como guía inicial; la propuesta final puede variar según ubicación, tipo de servicio, número de asistentes y requerimientos del evento.`,
       terms: 'Precotización automática (alimentos + personal) válida como referencia por 15 días hábiles. La cotización real y definitiva, incluyendo los servicios adicionales de interés, se confirma directamente contigo. Para reservar la fecha se requiere el 50% de anticipo.',
-      whatsappPhone: config.whatsapp_phone,
-      businessAddress: config.business_address
+      logoUrl: config.logo_url
     });
   };
 

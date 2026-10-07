@@ -46,6 +46,7 @@ import {
 import { Event, RSVP, UserSession, Quote, PaymentReceipt, VendorItem } from '../types';
 import { AppService, isSupabaseConfigured } from '../lib/supabase';
 import { calculateQuoteLedger } from '../lib/accounting';
+import { generateQuotePdf, getQuoteValidityText } from '../lib/pdfGenerator';
 
 interface ClientDashboardProps {
   currentUser: UserSession;
@@ -59,6 +60,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
   const [rsvpError, setRsvpError] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [quoteLogoUrl, setQuoteLogoUrl] = useState('');
   const [payments, setPayments] = useState<PaymentReceipt[]>([]);
   const [vendors, setVendors] = useState<VendorItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,8 +120,12 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
     async function loadClientData() {
       setLoading(true);
       try {
-        const clientEvents = await AppService.getEvents(currentUser);
+        const [clientEvents, clientConfig] = await Promise.all([
+          AppService.getEvents(currentUser),
+          AppService.getLandingConfig()
+        ]);
         setEvents(clientEvents);
+        setQuoteLogoUrl(clientConfig?.logo_url || '');
         
         if (clientEvents.length > 0) {
           setSelectedEvent(clientEvents[0]);
@@ -424,7 +430,32 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
   };
 
   const printQuote = () => {
-    window.print();
+    if (!selectedQuote) return;
+    void generateQuotePdf({
+      folio: selectedQuote.folio,
+      date: new Date(selectedQuote.created_at || Date.now()).toLocaleDateString('es-MX'),
+      clientName: selectedQuote.client_name,
+      clientPhone: selectedQuote.client_phone || '',
+      clientEmail: selectedQuote.client_email,
+      status: selectedQuote.status,
+      validity: getQuoteValidityText(selectedQuote.observations, selectedQuote.terms),
+      items: selectedQuote.items.map(item => ({
+        description: item.description,
+        price: item.price,
+        quantity: item.quantity,
+        discount: item.discount
+      })),
+      subtotal: selectedQuote.subtotal,
+      discountTotal: selectedQuote.discount_total,
+      applyIva: selectedQuote.apply_iva,
+      ivaTotal: selectedQuote.iva_total,
+      discountPercent: selectedQuote.discount_percent,
+      percentDiscountTotal: selectedQuote.percent_discount_total,
+      total: selectedQuote.total,
+      observations: selectedQuote.observations,
+      terms: selectedQuote.terms,
+      logoUrl: quoteLogoUrl
+    });
   };
 
   if (loading) {
@@ -441,109 +472,6 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
   return (
     <div className="min-h-screen bg-[#07080a] text-gray-200 font-sans pb-16 selection:bg-amber-400 selection:text-black">
       
-      {/* Printable Quote Wrapper (hidden on screen, visible only when printing) */}
-      {selectedQuote && (
-        <div className="hidden print:block p-8 bg-white text-black font-sans min-h-screen">
-          <div className="flex justify-between items-start border-b-2 border-amber-500 pb-6 mb-6">
-            <div>
-              <h1 className="font-serif text-3xl font-bold tracking-widest text-amber-600 uppercase">CELEBRA TU EVENTO</h1>
-              <p className="text-[10px] tracking-[0.2em] text-gray-500 font-mono uppercase">Planeación de Eventos & Producción Visual</p>
-              <p className="text-xs text-gray-600 mt-2">Av. Paseo de la Reforma 250, Juárez, CDMX</p>
-              <p className="text-xs text-gray-600">Tel: +52 1 55 1234 5678 | Email: contacto@celebratuevento.com</p>
-            </div>
-            <div className="text-right">
-              <span className="inline-block px-3 py-1 rounded bg-amber-500/10 text-amber-800 text-xs font-mono font-bold tracking-wider uppercase mb-2">
-                COTIZACIÓN OFICIAL
-              </span>
-              <p className="text-sm font-mono font-bold text-gray-900">FOLIO: {selectedQuote.folio}</p>
-              <p className="text-xs text-gray-500">Fecha: {new Date(selectedQuote.created_at).toLocaleDateString('es-MX')}</p>
-              <p className="text-xs text-gray-500 uppercase mt-1">Estatus: <strong>{selectedQuote.status}</strong></p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-8 mb-8 text-xs">
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-bold text-gray-800 uppercase font-mono tracking-wider mb-2">DATOS DEL CLIENTE</h4>
-              <p className="text-sm font-semibold">{selectedQuote.client_name}</p>
-              <p className="text-gray-600">Email: {selectedQuote.client_email}</p>
-              <p className="text-gray-600">Tel: {selectedQuote.client_phone}</p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg flex flex-col justify-between">
-              <div>
-                <h4 className="font-bold text-gray-800 uppercase font-mono tracking-wider mb-1">CONTRATISTA</h4>
-                <p className="font-semibold text-gray-900">Celebra tu Evento S.A. de C.V.</p>
-              </div>
-              <p className="text-[10px] text-gray-500 italic">Vigencia: 30 días naturales a partir de la fecha de emisión.</p>
-            </div>
-          </div>
-
-          <table className="w-full text-xs text-left border-collapse mb-8">
-            <thead>
-              <tr className="border-b-2 border-gray-300 text-gray-700 uppercase font-mono tracking-wider bg-gray-100">
-                <th className="py-3 px-4">Concepto / Servicio</th>
-                <th className="py-3 px-4 text-right">Precio Unitario</th>
-                <th className="py-3 px-4 text-center">Cant.</th>
-                <th className="py-3 px-4 text-right">Desc.</th>
-                <th className="py-3 px-4 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {selectedQuote.items.map((item, idx) => {
-                const itemTotal = (item.price * item.quantity) - item.discount;
-                return (
-                  <tr key={item.id || idx}>
-                    <td className="py-3 px-4 font-medium">{item.description}</td>
-                    <td className="py-3 px-4 text-right font-mono">${item.price.toLocaleString('es-MX')}</td>
-                    <td className="py-3 px-4 text-center font-mono">{item.quantity}</td>
-                    <td className="py-3 px-4 text-right font-mono text-red-500">-${item.discount.toLocaleString('es-MX')}</td>
-                    <td className="py-3 px-4 text-right font-mono font-semibold">${itemTotal.toLocaleString('es-MX')}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-
-          <div className="flex justify-end mb-8">
-            <div className="w-80 text-xs font-mono space-y-2 p-4 bg-gray-50 rounded-lg">
-              <div className="flex justify-between text-gray-600">
-                <span>SUBTOTAL:</span>
-                <span>${selectedQuote.subtotal.toLocaleString('es-MX')}</span>
-              </div>
-              <div className="flex justify-between text-red-500">
-                <span>DESCUENTOS:</span>
-                <span>-${selectedQuote.discount_total.toLocaleString('es-MX')}</span>
-              </div>
-              <div className="flex justify-between border-t border-gray-300 pt-2 text-sm font-bold text-gray-900">
-                <span>TOTAL NETO:</span>
-                <span>${selectedQuote.total.toLocaleString('es-MX')} MXN</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4 text-[10px] text-gray-500 border-t pt-6">
-            <div>
-              <h5 className="font-bold uppercase text-gray-700">Observaciones</h5>
-              <p className="leading-relaxed font-light">{selectedQuote.observations || 'N/A'}</p>
-            </div>
-            <div>
-              <h5 className="font-bold uppercase text-gray-700">Términos y Condiciones</h5>
-              <p className="leading-relaxed font-light">{selectedQuote.terms || 'N/A'}</p>
-            </div>
-          </div>
-
-          <div className="mt-16 grid grid-cols-2 gap-12 text-center text-[10px] uppercase tracking-wider font-semibold">
-            <div className="border-t border-gray-400 pt-4">
-              <p>Firma de Conformidad Cliente</p>
-              <p className="font-mono text-gray-400 font-normal mt-1">{selectedQuote.client_name}</p>
-            </div>
-            <div className="border-t border-gray-400 pt-4">
-              <p>Firma Autorizada Celebra tu Evento</p>
-              <p className="font-serif italic text-amber-600 mt-1">Director de Planeación</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Screen View */}
       <div className="print:hidden">
         {/* Top Navigation Bar */}
