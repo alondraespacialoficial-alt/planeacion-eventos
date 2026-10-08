@@ -48,6 +48,82 @@ import { AppService, isSupabaseConfigured } from '../lib/supabase';
 import { calculateQuoteLedger } from '../lib/accounting';
 import { generateQuotePdf, getQuoteValidityText } from '../lib/pdfGenerator';
 
+interface QrScannerModalProps {
+  onDetected: (code: string) => void;
+  onCancel: () => void;
+}
+
+function QrScannerModal({ onDetected, onCancel }: QrScannerModalProps) {
+  const scannerElementId = `rsvp-qr-reader-${React.useId().replace(/:/g, '')}`;
+  const onDetectedRef = React.useRef(onDetected);
+  const [cameraError, setCameraError] = useState(false);
+  onDetectedRef.current = onDetected;
+
+  useEffect(() => {
+    let disposed = false;
+    let started = false;
+    let detected = false;
+    let scanner: import('html5-qrcode').Html5Qrcode | null = null;
+
+    const stopScanner = async () => {
+      if (!scanner) return;
+      try {
+        if (scanner.isScanning) await scanner.stop();
+      } finally {
+        scanner.clear();
+      }
+    };
+
+    void import('html5-qrcode').then(({ Html5Qrcode, Html5QrcodeSupportedFormats }) => {
+      if (disposed) return;
+      scanner = new Html5Qrcode(scannerElementId, {
+        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        verbose: false,
+      });
+      return scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 240, height: 240 } },
+        code => {
+          if (disposed || detected) return;
+          detected = true;
+          onDetectedRef.current(code);
+        },
+        () => undefined,
+      );
+    }).then(async () => {
+      if (!scanner) return;
+      started = true;
+      if (disposed) await stopScanner();
+    }).catch(() => {
+      if (!disposed) setCameraError(true);
+    });
+
+    return () => {
+      disposed = true;
+      if (started) void stopScanner();
+    };
+  }, [scannerElementId]);
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-4">
+      <div className="w-full max-w-md rounded-2xl border border-gray-700 bg-[#0d0e12] p-5 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="font-mono text-sm font-bold tracking-widest text-amber-400">LECTOR QR</h3>
+          <button onClick={onCancel} className="rounded-lg border border-gray-700 px-3 py-2 text-xs text-gray-300 hover:text-white">
+            CANCELAR
+          </button>
+        </div>
+        <div id={scannerElementId} className="min-h-64 overflow-hidden rounded-xl bg-black" />
+        {cameraError && (
+          <p role="alert" className="mt-4 text-sm text-red-300">
+            No se pudo abrir la cámara. Cierra el lector y usa MARCAR ENTRADA.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface ClientDashboardProps {
   currentUser: UserSession;
   onLogout: () => void;
@@ -69,12 +145,21 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
   
   // Tab Management
   const [activeTab, setActiveTab] = useState<'overview' | 'quotes' | 'rsvps' | 'payments' | 'vendors'>('overview');
+
+  useEffect(() => {
+    if (activeTab !== 'rsvps') setShowQrScanner(false);
+  }, [activeTab, selectedEvent?.id]);
   
   // Printable view of selected quote
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
 
   // QR Pass Modal
   const [selectedPassRsvp, setSelectedPassRsvp] = useState<RSVP | null>(null);
+  const [showQrScanner, setShowQrScanner] = useState(false);
+  const [scannedPassRsvp, setScannedPassRsvp] = useState<RSVP | null>(null);
+  const [passValidationMessage, setPassValidationMessage] = useState<string | null>(null);
+  const [validatingPass, setValidatingPass] = useState(false);
+  const [registeringPass, setRegisteringPass] = useState(false);
 
   // Payment Upload Modal State
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -187,6 +272,8 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
   // Calculations for RSVPs
   const totalResponses = rsvps.length;
   const confirmedCount = rsvps.filter(r => r.attendance === 'confirmed').length;
+  const checkedInCount = rsvps.filter(r => r.attendance === 'confirmed' && r.checked_in).length;
+  const pendingEntryCount = confirmedCount - checkedInCount;
   const declinedCount = rsvps.filter(r => r.attendance === 'declined').length;
   const pendingCount = rsvps.filter(r => r.attendance === 'pending').length;
   
@@ -349,15 +436,60 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
   };
 
   const handleToggleCheckIn = async (rsvp: RSVP) => {
+    if (!selectedEvent) return;
     const newStatus = !rsvp.checked_in;
     try {
-      const updated = await AppService.checkInRSVP(rsvp.id, newStatus);
+      const updated = await AppService.checkInRSVP(rsvp.id, newStatus, selectedEvent.id);
       if (updated) {
         setRsvps(prev => prev.map(r => r.id === rsvp.id ? updated : r));
         showToast(newStatus ? `Entrada marcada para ${rsvp.name}` : `Entrada desmarcada para ${rsvp.name}`, 'success');
       }
     } catch (err) {
       showToast('Error al actualizar estatus de entrada.', 'error');
+    }
+  };
+
+  const handleQrDetected = async (code: string) => {
+    const eventId = selectedEvent?.id;
+    setShowQrScanner(false);
+    setScannedPassRsvp(null);
+    setPassValidationMessage(null);
+    if (!eventId) return;
+
+    setValidatingPass(true);
+    try {
+      const rsvp = await AppService.getRSVPByCodeForEvent(eventId, code);
+      if (selectedEvent?.id !== eventId) return;
+      if (!rsvp) {
+        setPassValidationMessage('PASE NO VÁLIDO');
+        return;
+      }
+      setScannedPassRsvp(rsvp);
+      if (rsvp.checked_in) setPassValidationMessage('ESTE PASE YA FUE REGISTRADO');
+      else if (rsvp.attendance !== 'confirmed') setPassValidationMessage('ASISTENCIA NO CONFIRMADA');
+    } catch (err) {
+      setPassValidationMessage(err instanceof Error ? err.message : 'No se pudo validar el pase.');
+    } finally {
+      setValidatingPass(false);
+    }
+  };
+
+  const handleRegisterScannedPass = async () => {
+    if (!selectedEvent || !scannedPassRsvp || scannedPassRsvp.checked_in || scannedPassRsvp.attendance !== 'confirmed') return;
+    setRegisteringPass(true);
+    try {
+      const updated = await AppService.checkInRSVP(scannedPassRsvp.id, true, selectedEvent.id);
+      if (!updated) {
+        setPassValidationMessage('PASE NO VÁLIDO');
+        return;
+      }
+      setRsvps(prev => prev.map(rsvp => rsvp.id === updated.id ? updated : rsvp));
+      setScannedPassRsvp(updated);
+      setPassValidationMessage('ENTRADA REGISTRADA');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Error al registrar la entrada.', 'error');
+    } finally {
+      setRegisteringPass(false);
     }
   };
 
@@ -857,8 +989,19 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
 
           {activeTab === 'rsvps' && selectedEvent && (
             <div className="space-y-8">
+              <button
+                onClick={() => {
+                  setScannedPassRsvp(null);
+                  setPassValidationMessage(null);
+                  setShowQrScanner(true);
+                }}
+                className="flex min-h-16 w-full items-center justify-center gap-3 rounded-xl border border-amber-400 bg-amber-500 px-6 py-4 font-mono text-base font-bold tracking-widest text-black transition-colors hover:bg-amber-400 sm:w-auto sm:min-w-64"
+              >
+                <Camera className="h-6 w-6" /> ESCANEAR QR
+              </button>
+
               {/* RSVP cards summary panel */}
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-7">
                 <div className="bg-[#0d0e12] border border-gray-800 p-5 rounded-2xl text-center">
                   <div className="text-gray-500 text-[10px] font-mono tracking-wider uppercase mb-2 flex items-center justify-center gap-1">
                     <Users className="w-3.5 h-3.5 text-blue-400" />
@@ -866,6 +1009,22 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                   </div>
                   <div className="font-serif text-3xl font-light text-white">{confirmedCount}</div>
                   <div className="text-[9px] font-mono text-gray-600 mt-1">Gente que dijo Sí</div>
+                </div>
+
+                <div className="bg-[#0d0e12] border border-gray-800 p-5 rounded-2xl text-center">
+                  <div className="text-gray-500 text-[10px] font-mono tracking-wider uppercase mb-2 flex items-center justify-center gap-1">
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    Ingresaron
+                  </div>
+                  <div className="font-serif text-3xl font-light text-emerald-400">{checkedInCount}</div>
+                </div>
+
+                <div className="bg-[#0d0e12] border border-gray-800 p-5 rounded-2xl text-center">
+                  <div className="text-gray-500 text-[10px] font-mono tracking-wider uppercase mb-2 flex items-center justify-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    Pendientes de ingresar
+                  </div>
+                  <div className="font-serif text-3xl font-light text-amber-300">{pendingEntryCount}</div>
                 </div>
 
                 <div className="bg-[#0d0e12] border border-gray-800 p-5 rounded-2xl text-center">
@@ -895,7 +1054,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                   <div className="text-[9px] font-mono text-gray-600 mt-1">No asistirán</div>
                 </div>
 
-                <div className="bg-[#0d0e12] border border-gray-800 p-5 rounded-2xl col-span-2 lg:col-span-1 text-center">
+                  <div className="bg-[#0d0e12] border border-gray-800 p-5 rounded-2xl col-span-2 sm:col-span-1 text-center">
                   <div className="text-gray-500 text-[10px] font-mono tracking-wider uppercase mb-2 flex items-center justify-center gap-1">
                     <HelpCircle className="w-3.5 h-3.5 text-gray-400" />
                     Pendientes
@@ -1026,7 +1185,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                                         : 'bg-gray-800/60 border-gray-700 text-gray-400 hover:text-white'
                                     }`}
                                   >
-                                    {rsvp.checked_in ? '✓ INGRESÓ' : '+ MARCAR ENTRADA'}
+                                    {rsvp.checked_in ? '↺ DESMARCAR ENTRADA' : '+ MARCAR ENTRADA'}
                                   </button>
                                 </div>
                               ) : (
@@ -1430,6 +1589,71 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {showQrScanner && (
+            <QrScannerModal
+              onDetected={handleQrDetected}
+              onCancel={() => setShowQrScanner(false)}
+            />
+          )}
+
+          {(validatingPass || scannedPassRsvp || passValidationMessage) && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4">
+              <div className="w-full max-w-md rounded-2xl border border-gray-700 bg-[#0d0e12] p-6 shadow-2xl">
+                <div className="mb-5 flex items-center justify-between gap-4">
+                  <h3 className="font-mono text-sm font-bold tracking-widest text-amber-400">VALIDACIÓN DE PASE</h3>
+                  <button
+                    onClick={() => {
+                      setScannedPassRsvp(null);
+                      setPassValidationMessage(null);
+                    }}
+                    className="rounded-lg border border-gray-700 px-3 py-2 text-xs text-gray-300 hover:text-white"
+                  >
+                    CERRAR
+                  </button>
+                </div>
+
+                {validatingPass && <p className="py-8 text-center text-sm text-gray-300">Validando pase...</p>}
+                {!validatingPass && passValidationMessage && (
+                  <p role="status" className={`py-3 text-center font-mono text-lg font-bold ${passValidationMessage === 'ENTRADA REGISTRADA' ? 'text-emerald-400' : 'text-red-300'}`}>
+                    {passValidationMessage}
+                  </p>
+                )}
+                {scannedPassRsvp && (
+                  <div className="space-y-3 border-t border-gray-800 pt-4">
+                    <p className="font-serif text-2xl text-white">{scannedPassRsvp.name}</p>
+                    <p className="font-mono text-sm text-amber-400">FOLIO: {scannedPassRsvp.pass_code || scannedPassRsvp.id}</p>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-lg bg-black/40 p-3">
+                        <p className="text-xs text-gray-500">LUGARES AUTORIZADOS</p>
+                        <p className="mt-1 font-semibold text-white">{1 + (scannedPassRsvp.plus_ones || 0)}</p>
+                      </div>
+                      <div className="rounded-lg bg-black/40 p-3">
+                        <p className="text-xs text-gray-500">ASISTENCIA</p>
+                        <p className="mt-1 font-semibold text-white">
+                          {scannedPassRsvp.attendance === 'confirmed' ? 'CONFIRMADA' : scannedPassRsvp.attendance === 'declined' ? 'DECLINÓ' : 'PENDIENTE'}
+                        </p>
+                      </div>
+                      <div className="col-span-2 rounded-lg bg-black/40 p-3">
+                        <p className="text-xs text-gray-500">ESTADO DE INGRESO</p>
+                        <p className="mt-1 font-semibold text-white">{scannedPassRsvp.checked_in ? 'INGRESÓ' : 'PENDIENTE DE INGRESAR'}</p>
+                      </div>
+                    </div>
+                    {!scannedPassRsvp.checked_in && scannedPassRsvp.attendance === 'confirmed' && (
+                      <button
+                        onClick={handleRegisterScannedPass}
+                        disabled={registeringPass}
+                        className="mt-2 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 font-mono text-sm font-bold tracking-wider text-black hover:bg-emerald-400 disabled:opacity-60"
+                      >
+                        <Check className="h-5 w-5" />
+                        {registeringPass ? 'REGISTRANDO...' : 'REGISTRAR ENTRADA'}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

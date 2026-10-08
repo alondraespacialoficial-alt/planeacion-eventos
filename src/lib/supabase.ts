@@ -1093,6 +1093,45 @@ export const AppService = {
     return all.filter(r => r.event_id === eventId);
   },
 
+  async getRSVPByCodeForEvent(eventId: string, code: string): Promise<RSVP | null> {
+    const normalizedCode = code.trim();
+    if (!normalizedCode) return null;
+
+    if (isSupabaseConfigured) {
+      if (!supabase || !supabaseTablesExist) {
+        throw new Error('No se pudo validar el pase en la base de datos.');
+      }
+
+      const { data: passMatches, error: passError } = await supabase
+        .from('rsvps')
+        .select('*')
+        .eq('event_id', eventId)
+        .eq('pass_code', normalizedCode)
+        .limit(2);
+      if (passError) throw new Error(`No se pudo validar el pase: ${passError.message}`);
+
+      let matches = passMatches || [];
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalizedCode)) {
+        const { data: idMatches, error: idError } = await supabase
+          .from('rsvps')
+          .select('*')
+          .eq('event_id', eventId)
+          .eq('id', normalizedCode)
+          .limit(2);
+        if (idError) throw new Error(`No se pudo validar el pase: ${idError.message}`);
+        matches = [...matches, ...(idMatches || [])];
+      }
+
+      const uniqueMatches = [...new Map(matches.map(rsvp => [rsvp.id, rsvp])).values()];
+      return uniqueMatches.length === 1 ? uniqueMatches[0] as RSVP : null;
+    }
+
+    const matches = LocalStorageDB.getRSVPs().filter(rsvp =>
+      rsvp.event_id === eventId && (rsvp.id === normalizedCode || rsvp.pass_code === normalizedCode)
+    );
+    return matches.length === 1 ? matches[0] : null;
+  },
+
   async submitRSVP(rsvp: Omit<RSVP, 'id' | 'created_at'>): Promise<RSVP> {
     if (!isSupabaseConfigured || !supabase) {
       const localRsvp: RSVP = {
@@ -1127,26 +1166,28 @@ export const AppService = {
     return data.rsvp as RSVP;
   },
 
-  async checkInRSVP(rsvpIdOrPassCode: string, checkedIn: boolean): Promise<RSVP | null> {
-    if (isSupabaseConfigured && supabase && supabaseTablesExist) {
-      try {
-        const { data, error } = await supabase
-          .from('rsvps')
-          .update({
-            checked_in: checkedIn,
-            checked_in_at: checkedIn ? new Date().toISOString() : null
-          })
-          .or(`id.eq.${rsvpIdOrPassCode},pass_code.eq.${rsvpIdOrPassCode}`)
-          .select()
-          .maybeSingle();
-        if (!error && data) return data as RSVP;
-      } catch (err) {
-        console.error('Error checking in RSVP in Supabase, fallback to local', err);
+  async checkInRSVP(rsvpId: string, checkedIn: boolean, eventId: string): Promise<RSVP | null> {
+    if (isSupabaseConfigured) {
+      if (!supabase || !supabaseTablesExist) {
+        throw new Error('No se pudo guardar la entrada en la base de datos.');
       }
+
+      const { data, error } = await supabase
+        .from('rsvps')
+        .update({
+          checked_in: checkedIn,
+          checked_in_at: checkedIn ? new Date().toISOString() : null
+        })
+        .eq('event_id', eventId)
+        .eq('id', rsvpId)
+        .select()
+        .maybeSingle();
+      if (error) throw new Error(`No se pudo actualizar la entrada: ${error.message}`);
+      return data as RSVP | null;
     }
 
     const all = LocalStorageDB.getRSVPs();
-    const idx = all.findIndex(r => r.id === rsvpIdOrPassCode || r.pass_code === rsvpIdOrPassCode);
+    const idx = all.findIndex(r => r.id === rsvpId && r.event_id === eventId);
     if (idx !== -1) {
       all[idx].checked_in = checkedIn;
       all[idx].checked_in_at = checkedIn ? new Date().toISOString() : undefined;
@@ -2445,6 +2486,32 @@ CREATE POLICY "Owners read RSVP confirmations" ON public.rsvps
             )
         )
     );
+
+      DROP POLICY IF EXISTS "Owners update RSVP check-in" ON public.rsvps;
+      CREATE POLICY "Owners update RSVP check-in" ON public.rsvps
+        FOR UPDATE TO authenticated
+        USING (
+          EXISTS (
+            SELECT 1 FROM public.eventos
+            WHERE public.eventos.id = public.rsvps.event_id
+            AND (
+              public.eventos.created_by = auth.uid() OR
+              public.eventos.client_email = auth.jwt() ->> 'email'
+            )
+          )
+        )
+        WITH CHECK (
+          EXISTS (
+            SELECT 1 FROM public.eventos
+            WHERE public.eventos.id = public.rsvps.event_id
+            AND (
+              public.eventos.created_by = auth.uid() OR
+              public.eventos.client_email = auth.jwt() ->> 'email'
+            )
+          )
+        );
+      REVOKE UPDATE ON TABLE public.rsvps FROM anon, authenticated;
+      GRANT UPDATE (checked_in, checked_in_at) ON TABLE public.rsvps TO authenticated;
 
 -- 4.3. Policies for SERVICES
 DROP POLICY IF EXISTS "Public read visible services" ON public.services;
