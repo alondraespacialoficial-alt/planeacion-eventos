@@ -157,6 +157,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
   const [selectedPassRsvp, setSelectedPassRsvp] = useState<RSVP | null>(null);
   const [showQrScanner, setShowQrScanner] = useState(false);
   const [scannedPassRsvp, setScannedPassRsvp] = useState<RSVP | null>(null);
+  const qrScanButtonRef = React.useRef<HTMLButtonElement>(null);
   const [passValidationMessage, setPassValidationMessage] = useState<string | null>(null);
   const [validatingPass, setValidatingPass] = useState(false);
   const [registeringPass, setRegisteringPass] = useState(false);
@@ -491,6 +492,21 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
     } finally {
       setRegisteringPass(false);
     }
+  };
+
+  const closePassResult = () => {
+    setScannedPassRsvp(null);
+    setPassValidationMessage(null);
+    window.requestAnimationFrame(() => {
+      qrScanButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      qrScanButtonRef.current?.focus({ preventScroll: true });
+    });
+  };
+
+  const scanNextPass = () => {
+    setScannedPassRsvp(null);
+    setPassValidationMessage(null);
+    setShowQrScanner(true);
   };
 
   // Filtered RSVPs for table
@@ -990,6 +1006,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
           {activeTab === 'rsvps' && selectedEvent && (
             <div className="space-y-8">
               <button
+                ref={qrScanButtonRef}
                 onClick={() => {
                   setScannedPassRsvp(null);
                   setPassValidationMessage(null);
@@ -1606,10 +1623,7 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                 <div className="mb-5 flex items-center justify-between gap-4">
                   <h3 className="font-mono text-sm font-bold tracking-widest text-amber-400">VALIDACIÓN DE PASE</h3>
                   <button
-                    onClick={() => {
-                      setScannedPassRsvp(null);
-                      setPassValidationMessage(null);
-                    }}
+                    onClick={closePassResult}
                     className="rounded-lg border border-gray-700 px-3 py-2 text-xs text-gray-300 hover:text-white"
                   >
                     CERRAR
@@ -1653,6 +1667,14 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                       </button>
                     )}
                   </div>
+                )}
+                {!validatingPass && passValidationMessage && (
+                  <button
+                    onClick={scanNextPass}
+                    className="mt-4 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl border border-amber-400 px-4 py-3 font-mono text-sm font-bold tracking-wider text-amber-300 hover:bg-amber-500/10"
+                  >
+                    <Camera className="h-5 w-5" /> ESCANEAR SIGUIENTE
+                  </button>
                 )}
               </div>
             </div>
