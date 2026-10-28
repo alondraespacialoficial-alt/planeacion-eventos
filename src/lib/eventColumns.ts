@@ -19,3 +19,16 @@ export const hasNewTimeValues = (fields: object): boolean =>
 
 export const MISSING_TIME_COLUMNS_MESSAGE =
   'La base de datos aún no tiene las columnas de horarios de ceremonia/recepción. Aplica la migración 20261029120000 antes de guardar esos horarios.';
+
+// Los horarios nuevos solo se envían si tienen valor o si el evento ya traía esas columnas (migración aplicada).
+export const buildOptionalTimes = (
+  values: { ceremony_time?: string; reception_time?: string },
+  existingEvent?: object
+): { ceremony_time?: string | null; reception_time?: string | null } => {
+  const result: { ceremony_time?: string | null; reception_time?: string | null } = {};
+  NEW_TIME_COLUMNS.forEach(col => {
+    const value = values[col];
+    if (value || (existingEvent && col in existingEvent)) result[col] = value || null;
+  });
+  return result;
+};

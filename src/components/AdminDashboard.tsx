@@ -53,6 +53,7 @@ import { Event, UserSession, Service, Lead, Quote, QuoteItem, LandingConfig, Pay
 import { formatTime12h } from '../lib/time';
 import { AppService, isSupabaseConfigured, SUPABASE_SQL_BLUEPRINT } from '../lib/supabase';
 import { calculateQuoteLedger } from '../lib/accounting';
+import { buildOptionalTimes } from '../lib/eventColumns';
 import { generateQuotePdf, generateQuotePdfBase64, getQuoteValidityText } from '../lib/pdfGenerator';
 
 interface AdminDashboardProps {
@@ -488,13 +489,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     try {
       // Las columnas nuevas solo se envían si tienen valor o ya existen en el evento, para no fallar si la migración aún no se aplicó.
       const existingEvent = editingEventId ? events.find(ev => ev.id === editingEventId) : undefined;
-      const optionalTimes: Partial<Pick<Event, 'ceremony_time' | 'reception_time'>> = {};
-      if (evtCeremonyTime || (existingEvent && 'ceremony_time' in existingEvent)) {
-        optionalTimes.ceremony_time = (evtCeremonyTime || null) as string;
-      }
-      if (evtReceptionTime || (existingEvent && 'reception_time' in existingEvent)) {
-        optionalTimes.reception_time = (evtReceptionTime || null) as string;
-      }
+      const optionalTimes = buildOptionalTimes({ ceremony_time: evtCeremonyTime, reception_time: evtReceptionTime }, existingEvent);
 
       const payload = {
         title: evtTitle,

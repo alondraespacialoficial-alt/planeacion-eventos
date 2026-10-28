@@ -18,7 +18,10 @@ const demoHtml = (enabled: boolean) => ({
 const DEMO_ONLY_BRANCH = 'feat/invitaciones-plantilla-v2';
 
 // Antes de cargar el entorno, en esa rama se fuerza demo y se vacian las credenciales de Supabase heredadas.
-if (process.env.VERCEL_GIT_COMMIT_REF === DEMO_ONLY_BRANCH) {
+// Defensa por entorno (no por nombre de rama): cualquier build de Vercel que no sea Production queda aislado en demo.
+const isNonProductionVercelBuild = !!process.env.VERCEL && process.env.VERCEL_ENV !== 'production';
+
+if (process.env.VERCEL_GIT_COMMIT_REF === DEMO_ONLY_BRANCH || isNonProductionVercelBuild) {
   process.env.VITE_FORCE_DEMO = 'true';
   process.env.VITE_SUPABASE_URL = '';
   process.env.VITE_SUPABASE_ANON_KEY = '';
