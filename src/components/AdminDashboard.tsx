@@ -133,6 +133,9 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   const [evtTime, setEvtTime] = useState('');
   const [evtLocationName, setEvtLocationName] = useState('');
   const [evtLocationAddress, setEvtLocationAddress] = useState('');
+  const [evtChurchName, setEvtChurchName] = useState('');
+  const [evtChurchAddress, setEvtChurchAddress] = useState('');
+  const [evtChurchMapsUrl, setEvtChurchMapsUrl] = useState('');
   const [evtMapEmbedUrl, setEvtMapEmbedUrl] = useState('');
   const [evtCoverType, setEvtCoverType] = useState<'image' | 'video'>('image');
   const [evtCoverUrl, setEvtCoverUrl] = useState('');
@@ -417,6 +420,9 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     setEvtTime('');
     setEvtLocationName('');
     setEvtLocationAddress('');
+    setEvtChurchName('');
+    setEvtChurchAddress('');
+    setEvtChurchMapsUrl('');
     setEvtMapEmbedUrl('');
     setEvtCoverType('image');
     setEvtCoverUrl('');
@@ -443,6 +449,9 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     setEvtTime(evt.time);
     setEvtLocationName(evt.location_name);
     setEvtLocationAddress(evt.location_address);
+    setEvtChurchName(evt.church_name || '');
+    setEvtChurchAddress(evt.church_address || '');
+    setEvtChurchMapsUrl(evt.church_maps_url || '');
     setEvtMapEmbedUrl(evt.map_embed_url || '');
     setEvtCoverType(evt.cover_type);
     setEvtCoverUrl(evt.cover_url);
@@ -479,6 +488,9 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
         time: evtTime,
         location_name: evtLocationName,
         location_address: evtLocationAddress,
+        church_name: evtChurchName.trim(),
+        church_address: evtChurchAddress.trim(),
+        church_maps_url: evtChurchMapsUrl.trim(),
         map_embed_url: evtMapEmbedUrl,
         cover_type: evtCoverType,
         cover_url: evtCoverUrl || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=1200',
@@ -2967,6 +2979,25 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                 <label className="block font-mono text-gray-400 mb-1">IFRAME SRC DE GOOGLE MAPS (OPCIONAL)</label>
                 <input type="text" value={evtMapEmbedUrl} onChange={(e) => setEvtMapEmbedUrl(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" placeholder="https://www.google.com/maps/embed?pb=..." />
                 <p className="text-[10px] text-gray-500 mt-1">Solo pega el código de "Insertar un mapa" de Google Maps (debe empezar con .../maps/embed?...). Un link normal (compartir/copiar dirección) NO funciona aquí y se mostrará un mapa referencial en su lugar.</p>
+              </div>
+
+              <div className="space-y-3 border border-gray-800/80 rounded-lg p-4 bg-black/20">
+                <p className="font-mono text-amber-500 text-[10px] tracking-widest">CEREMONIA RELIGIOSA / IGLESIA (OPCIONAL)</p>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-mono text-gray-400 mb-1">NOMBRE DE LA IGLESIA</label>
+                    <input type="text" value={evtChurchName} onChange={(e) => setEvtChurchName(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" placeholder="Ej. Parroquia San Judas Tadeo" />
+                  </div>
+                  <div>
+                    <label className="block font-mono text-gray-400 mb-1">DIRECCIÓN DE LA IGLESIA</label>
+                    <input type="text" value={evtChurchAddress} onChange={(e) => setEvtChurchAddress(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" placeholder="Calle, número, colonia, ciudad" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block font-mono text-gray-400 mb-1">LINK DE GOOGLE MAPS DE LA IGLESIA</label>
+                  <input type="url" value={evtChurchMapsUrl} onChange={(e) => setEvtChurchMapsUrl(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" placeholder="https://maps.app.goo.gl/..." />
+                  <p className="text-[10px] text-gray-500 mt-1">Pega el link normal de "Compartir" de Google Maps. Si lo dejas vacío, se genera uno a partir de la dirección.</p>
+                </div>
               </div>
 
               <div>

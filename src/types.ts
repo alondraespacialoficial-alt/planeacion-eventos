@@ -14,6 +14,9 @@ export interface Event {
   location_name: string;
   location_address: string;
   map_embed_url: string;
+  church_name?: string; // ceremonia religiosa (opcional)
+  church_address?: string;
+  church_maps_url?: string; // link normal de Google Maps
   cover_type: 'image' | 'video';
   cover_url: string;
   gallery_urls?: string[]; // fotos adicionales para la sección "Nuestra Historia"

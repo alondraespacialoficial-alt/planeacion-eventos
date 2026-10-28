@@ -214,6 +214,10 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
   const rsvpDeadlinePassed = new Date() > new Date(`${event.rsvp_deadline}T23:59:59`);
   const rsvpPlusOnesLimit = Math.min(10, event.max_plus_ones ?? 10);
   const mapsSearchUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location_name + ' ' + event.location_address)}`;
+  const hasChurch = !!(event.church_name?.trim() || event.church_address?.trim());
+  const churchMapsUrl = /^https?:\/\//i.test(event.church_maps_url?.trim() || '')
+    ? event.church_maps_url!.trim()
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${event.church_name || ''} ${event.church_address || ''}`.trim())}`;
   // Links normales de Google Maps (no de la API de Embed) son rechazados al intentar iframearlos ("google.com rechazó la conexión")
   const isValidMapEmbedUrl = !!event.map_embed_url && event.map_embed_url.includes('/maps/embed');
 
@@ -428,6 +432,28 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
             </div>
           </div>
         </div>
+
+        {hasChurch && (
+          <div className="p-8 rounded-2xl border border-gray-800 bg-[#0e1013]/90 backdrop-blur-md mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+            <div>
+              <div className="h-10 w-10 rounded-full bg-amber-500/5 border border-amber-500/15 flex items-center justify-center text-amber-400 mb-4">
+                <MapPin className="w-5 h-5" />
+              </div>
+              <h3 className="font-serif text-xl text-white mb-2">Ceremonia religiosa</h3>
+              {event.church_name && <p className="font-serif text-lg text-white font-medium mb-1">{event.church_name}</p>}
+              {event.church_address && <p className="text-xs text-gray-500 leading-relaxed font-sans">{event.church_address}</p>}
+            </div>
+            <a
+              href={churchMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 text-[10px] font-mono text-black bg-amber-400 hover:bg-amber-300 transition-colors px-4 py-2 rounded-full tracking-widest shrink-0"
+            >
+              <MapPin className="w-3 h-3" />
+              VER IGLESIA EN MAPS
+            </a>
+          </div>
+        )}
 
         {/* Location Map */}
         <div className="rounded-2xl overflow-hidden border border-gray-800 bg-[#0e1013] shadow-2xl relative">

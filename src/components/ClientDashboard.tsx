@@ -749,6 +749,12 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                         <p className="text-gray-500 uppercase text-[9px] tracking-widest">LUGAR / SALÓN</p>
                         <p className="text-white font-medium text-sm mt-1 truncate">📍 {selectedEvent?.location_name}</p>
                       </div>
+                      {selectedEvent?.church_name || selectedEvent?.church_address ? (
+                        <div>
+                          <p className="text-gray-500 uppercase text-[9px] tracking-widest">IGLESIA</p>
+                          <p className="text-white font-medium text-sm mt-1 truncate">⛪ {selectedEvent?.church_name || selectedEvent?.church_address}</p>
+                        </div>
+                      ) : null}
                     </div>
 
                     <div className="space-y-4">
