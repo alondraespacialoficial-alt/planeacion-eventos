@@ -9,3 +9,13 @@ export const withoutNewTimeColumns = <T extends object>(fields: T): T => {
   NEW_TIME_COLUMNS.forEach(col => delete copy[col]);
   return copy as T;
 };
+
+// Indica si el payload trae algún horario nuevo con valor, que se perdería al reintentar sin esas columnas.
+export const hasNewTimeValues = (fields: object): boolean =>
+  NEW_TIME_COLUMNS.some(col => {
+    const value = (fields as Record<string, unknown>)[col];
+    return value !== undefined && value !== null && value !== '';
+  });
+
+export const MISSING_TIME_COLUMNS_MESSAGE =
+  'La base de datos aún no tiene las columnas de horarios de ceremonia/recepción. Aplica la migración 20261029120000 antes de guardar esos horarios.';

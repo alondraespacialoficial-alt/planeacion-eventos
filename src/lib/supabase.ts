@@ -6,7 +6,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { Event, RSVP, UserSession, Service, Lead, Quote, LandingConfig, PaymentReceipt, VendorItem, UserProfile, GalleryItem, RateItem } from '../types';
 import { isApprovedQuoteForClient } from './accounting';
-import { isMissingNewTimeColumn, withoutNewTimeColumns } from './eventColumns';
+import { hasNewTimeValues, isMissingNewTimeColumn, MISSING_TIME_COLUMNS_MESSAGE, withoutNewTimeColumns } from './eventColumns';
 import { isForceDemo } from './demoMode';
 
 // Read configuration from env
@@ -1006,6 +1006,8 @@ export const AppService = {
           .select()
           .single();
         if (error && isMissingNewTimeColumn(error.message)) {
+          // Nunca se descartan horarios con valor: se avisa en vez de confirmar un guardado incompleto.
+          if (hasNewTimeValues(newEvent)) throw new Error(`No se pudo guardar la invitación. ${MISSING_TIME_COLUMNS_MESSAGE}`);
           ({ data, error } = await supabase
             .from('eventos')
             .insert([withoutNewTimeColumns(newEvent)])
@@ -1016,7 +1018,7 @@ export const AppService = {
         // Error explícito de Supabase (RLS, columna faltante, etc.) - no es de conexión.
         // Hay que avisarle al admin en vez de guardar solo en local (produciría un id "undefined" en el link).
         console.error('Error creating event in Supabase:', error);
-        throw new Error(error.message || 'No se pudo guardar la invitación en Supabase.');
+        throw new Error(`No se pudo guardar la invitación en Supabase: ${error.message}`);
       } catch (err: any) {
         if (err?.message?.includes('No se pudo guardar')) throw err;
         console.error('Error de conexión al crear evento, usando fallback local...', err);
@@ -1040,6 +1042,7 @@ export const AppService = {
           .select()
           .single();
         if (error && isMissingNewTimeColumn(error.message)) {
+          if (hasNewTimeValues(updatedFields)) throw new Error(`No se pudo actualizar la invitación. ${MISSING_TIME_COLUMNS_MESSAGE}`);
           ({ data, error } = await supabase
             .from('eventos')
             .update(withoutNewTimeColumns(updatedFields))
@@ -1049,7 +1052,7 @@ export const AppService = {
         }
         if (!error) return data as Event;
         console.error('Error updating event in Supabase:', error);
-        throw new Error(error.message || 'No se pudo actualizar la invitación en Supabase.');
+        throw new Error(`No se pudo actualizar la invitación en Supabase: ${error.message}`);
       } catch (err: any) {
         if (err?.message?.includes('No se pudo actualizar')) throw err;
         console.error('Error de conexión al actualizar evento, usando fallback local...', err);
