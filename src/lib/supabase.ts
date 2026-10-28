@@ -6,6 +6,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { Event, RSVP, UserSession, Service, Lead, Quote, LandingConfig, PaymentReceipt, VendorItem, UserProfile, GalleryItem, RateItem } from '../types';
 import { isApprovedQuoteForClient } from './accounting';
+import { isMissingNewTimeColumn, withoutNewTimeColumns } from './eventColumns';
 
 // Read configuration from env
 const rawSupabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
@@ -61,16 +62,6 @@ export async function verifySupabaseTables(): Promise<boolean> {
     return false;
   }
 }
-
-// Si la migración de horarios aún no se aplicó, se reintenta el guardado sin esas columnas.
-const NEW_TIME_COLUMNS = ['ceremony_time', 'reception_time'] as const;
-const isMissingNewTimeColumn = (message?: string) =>
-  !!message && NEW_TIME_COLUMNS.some(col => message.includes(col));
-const withoutNewTimeColumns = <T extends object>(fields: T): T => {
-  const copy = { ...fields } as Record<string, unknown>;
-  NEW_TIME_COLUMNS.forEach(col => delete copy[col]);
-  return copy as T;
-};
 
 // --- INITIAL SEED DATA FOR DEMO / STORAGE BACKUP ---
 const DEFAULT_EVENTS: Event[] = [
@@ -2139,7 +2130,8 @@ CREATE TABLE IF NOT EXISTS public.eventos (
     church_address TEXT,
     church_maps_url TEXT,
     ceremony_time TIME WITHOUT TIME ZONE,
-    reception_time TIME WITHOUT TIME ZONE,    cover_type TEXT CHECK (cover_type IN ('image', 'video')) DEFAULT 'image',
+    reception_time TIME WITHOUT TIME ZONE,
+    cover_type TEXT CHECK (cover_type IN ('image', 'video')) DEFAULT 'image',
     cover_url TEXT,
     gallery_urls TEXT[] DEFAULT '{}',
     music_url TEXT,

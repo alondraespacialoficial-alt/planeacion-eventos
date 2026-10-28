@@ -50,6 +50,7 @@ import {
   Search
 } from 'lucide-react';
 import { Event, UserSession, Service, Lead, Quote, QuoteItem, LandingConfig, PaymentReceipt, UserProfile, GalleryItem, RateItem } from '../types';
+import { formatTime12h } from '../lib/time';
 import { AppService, isSupabaseConfigured, SUPABASE_SQL_BLUEPRINT } from '../lib/supabase';
 import { calculateQuoteLedger } from '../lib/accounting';
 import { generateQuotePdf, generateQuotePdfBase64, getQuoteValidityText } from '../lib/pdfGenerator';
@@ -1624,7 +1625,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                       
                       <div className="grid grid-cols-2 gap-2 pt-3 text-[10px] font-mono text-gray-400 border-t border-gray-800/60 mt-3">
                         <p>📅 {ev.date}</p>
-                        <p>⏰ {ev.time} HRS</p>
+                        <p>⏰ {formatTime12h(ev.time) ?? ev.time}</p>
                         <p className="col-span-2 truncate">📍 {ev.location_name}</p>
                       </div>
                     </div>
@@ -2967,7 +2968,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                 <div>
                   <label className="block font-mono text-gray-400 mb-1">HORA GENERAL DEL EVENTO *</label>
                   <input type="time" required value={evtTime} onChange={(e) => setEvtTime(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" />
-                  <p className="text-[10px] text-gray-500 mt-1">Base de la cuenta regresiva.</p>
+                  <p className="text-[10px] text-gray-500 mt-1">Base de la cuenta regresiva. {formatTime12h(evtTime) ?? ''}</p>
                 </div>
                 <div>
                   <label className="block font-mono text-gray-400 mb-1">LÍMITE RSVP *</label>
@@ -2979,10 +2980,12 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                 <div>
                   <label className="block font-mono text-gray-400 mb-1">HORA DE CEREMONIA (OPCIONAL)</label>
                   <input type="time" value={evtCeremonyTime} onChange={(e) => setEvtCeremonyTime(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" />
+                  <p className="text-[10px] text-gray-500 mt-1">{formatTime12h(evtCeremonyTime) ?? 'Sin hora de ceremonia'}</p>
                 </div>
                 <div>
                   <label className="block font-mono text-gray-400 mb-1">HORA DE RECEPCIÓN (OPCIONAL)</label>
                   <input type="time" value={evtReceptionTime} onChange={(e) => setEvtReceptionTime(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" />
+                  <p className="text-[10px] text-gray-500 mt-1">{formatTime12h(evtReceptionTime) ?? 'Sin hora de recepción'}</p>
                 </div>
               </div>
 
@@ -3085,7 +3088,7 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                   <div className="space-y-1.5 mb-2">
                     {evtItinerary.map((item, index) => (
                       <div key={index} className="flex items-center justify-between gap-2 bg-black/30 border border-gray-800 rounded px-3 py-1.5">
-                        <span className="text-white"><strong className="text-amber-500">{item.time}</strong> — {item.label}</span>
+                        <span className="text-white"><strong className="text-amber-500">{formatTime12h(item.time) ?? item.time}</strong> — {item.label}</span>
                         <button type="button" onClick={() => handleRemoveItineraryItem(index)} className="text-gray-500 hover:text-red-400">✕</button>
                       </div>
                     ))}

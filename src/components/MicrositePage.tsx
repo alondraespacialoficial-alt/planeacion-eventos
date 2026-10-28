@@ -561,7 +561,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
           <div className="space-y-4">
             {event.itinerary.map((item, index) => (
               <div key={index} className="flex items-center gap-4 p-4 rounded-xl border border-gray-800 bg-[#0e1013]/80">
-                <span className="font-serif text-amber-400 text-lg font-medium w-16 shrink-0">{item.time}</span>
+                <span className="font-serif text-amber-400 text-lg font-medium w-24 shrink-0">{formatTime12h(item.time) ?? item.time}</span>
                 <span className="text-gray-300 text-sm font-light">{item.label}</span>
               </div>
             ))}
