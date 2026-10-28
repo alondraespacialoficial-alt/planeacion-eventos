@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Event, RSVP, UserSession, Service, Lead, Quote, LandingConfig, PaymentReceipt, VendorItem, UserProfile, GalleryItem, RateItem } from '../types';
 import { isApprovedQuoteForClient } from './accounting';
 import { isMissingNewTimeColumn, withoutNewTimeColumns } from './eventColumns';
+import { isForceDemo } from './demoMode';
 
 // Read configuration from env
 const rawSupabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
@@ -20,7 +21,8 @@ const supabaseUrl = rawSupabaseUrl
   ? String(rawSupabaseUrl).trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '')
   : rawSupabaseUrl;
 
-export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
+// VITE_FORCE_DEMO=true ignora las credenciales: no se crea cliente y todo cae al modo local con datos ficticios.
+export const isSupabaseConfigured = !isForceDemo && !!(supabaseUrl && supabaseAnonKey);
 
 // Create real Supabase client if configured
 export const supabase = isSupabaseConfigured 

@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { isForceDemo } from './demoMode';
 
 export interface QuotePdfData {
   folio: string;
@@ -49,6 +50,7 @@ export function getQuoteValidityText(...texts: Array<string | undefined>): strin
 }
 
 async function loadLogoData(logoUrl?: string): Promise<{ data: string; format: 'PNG' | 'JPEG' } | undefined> {
+  if (isForceDemo) return undefined;
   try {
     const response = await fetch(logoUrl || OFFICIAL_LOGO_URL);
     if (!response.ok) return undefined;

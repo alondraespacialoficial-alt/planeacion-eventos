@@ -33,6 +33,7 @@ import {
 import { Event, RSVP } from '../types';
 import { AppService } from '../lib/supabase';
 import { formatTime12h } from '../lib/time';
+import { isForceDemo } from '../lib/demoMode';
 import { getVisibleSections } from '../lib/sectionNav';
 import SectionNav from './SectionNav';
 
@@ -521,6 +522,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
                 rel="noopener noreferrer"
                 className="absolute inset-0 group block"
               >
+                {!isForceDemo && (
                 <img
                   src="https://eztuwxavcvqingoycorg.supabase.co/storage/v1/object/public/event-assets/Gemini_Generated_Image_o5x1h9o5x1h9o5x1.jpg"
                   alt="Mapa referencial"
@@ -528,6 +530,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
                   decoding="async"
                   className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-300"
                 />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/20" />
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
                   <span className="relative flex h-4 w-4 mb-4">
