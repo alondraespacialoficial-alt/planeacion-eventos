@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { Event, RSVP, UserSession, Quote, PaymentReceipt, VendorItem } from '../types';
 import { AppService, isSupabaseConfigured } from '../lib/supabase';
+import { formatTime12h } from '../lib/time';
 import { calculateQuoteLedger } from '../lib/accounting';
 import { generateQuotePdf, getQuoteValidityText } from '../lib/pdfGenerator';
 
@@ -742,9 +743,21 @@ export default function ClientDashboard({ currentUser, onLogout, onNavigate }: C
                         <p className="text-white font-medium text-sm mt-1">📅 {selectedEvent?.date}</p>
                       </div>
                       <div>
-                        <p className="text-gray-500 uppercase text-[9px] tracking-widest">HORARIO REUNIÓN</p>
-                        <p className="text-white font-medium text-sm mt-1">⏰ {selectedEvent?.time} HRS</p>
+                        <p className="text-gray-500 uppercase text-[9px] tracking-widest">HORA GENERAL</p>
+                        <p className="text-white font-medium text-sm mt-1">⏰ {formatTime12h(selectedEvent?.time) ?? selectedEvent?.time}</p>
                       </div>
+                      {formatTime12h(selectedEvent?.ceremony_time) && (
+                        <div>
+                          <p className="text-gray-500 uppercase text-[9px] tracking-widest">HORA DE CEREMONIA</p>
+                          <p className="text-white font-medium text-sm mt-1">⏰ {formatTime12h(selectedEvent?.ceremony_time)}</p>
+                        </div>
+                      )}
+                      {formatTime12h(selectedEvent?.reception_time) && (
+                        <div>
+                          <p className="text-gray-500 uppercase text-[9px] tracking-widest">HORA DE RECEPCIÓN</p>
+                          <p className="text-white font-medium text-sm mt-1">⏰ {formatTime12h(selectedEvent?.reception_time)}</p>
+                        </div>
+                      )}
                       <div>
                         <p className="text-gray-500 uppercase text-[9px] tracking-widest">LUGAR / SALÓN</p>
                         <p className="text-white font-medium text-sm mt-1 truncate">📍 {selectedEvent?.location_name}</p>

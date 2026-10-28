@@ -62,6 +62,16 @@ export async function verifySupabaseTables(): Promise<boolean> {
   }
 }
 
+// Si la migración de horarios aún no se aplicó, se reintenta el guardado sin esas columnas.
+const NEW_TIME_COLUMNS = ['ceremony_time', 'reception_time'] as const;
+const isMissingNewTimeColumn = (message?: string) =>
+  !!message && NEW_TIME_COLUMNS.some(col => message.includes(col));
+const withoutNewTimeColumns = <T extends object>(fields: T): T => {
+  const copy = { ...fields } as Record<string, unknown>;
+  NEW_TIME_COLUMNS.forEach(col => delete copy[col]);
+  return copy as T;
+};
+
 // --- INITIAL SEED DATA FOR DEMO / STORAGE BACKUP ---
 const DEFAULT_EVENTS: Event[] = [
   {
@@ -71,8 +81,12 @@ const DEFAULT_EVENTS: Event[] = [
     description: 'Acompáñanos a celebrar nuestro amor en una noche llena de magia, música y alegría. Tu presencia es nuestro mejor regalo.',
     date: '2026-11-14',
     time: '17:30',
+    ceremony_time: '17:30',
+    reception_time: '19:30',
     location_name: 'Hacienda de los Morales',
     location_address: 'Vázquez de Mella 525, Polanco, Ciudad de México',
+    church_name: 'Parroquia de Ejemplo',
+    church_address: 'Calle Ficticia 123, Centro, Ciudad de México',
     map_embed_url: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m12!1m3!1d3762.4601423871415!2d-99.21370248509318!3d19.4357499868822!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85d2021c3fa36ef5%3A0xc6cb1c7df4446c62!2sHacienda%20De%20Los%20Morales!5e0!3m2!1ses!2smx!4v1700000000000!5m2!1ses!2smx',
     cover_type: 'image',
     cover_url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1200',
@@ -993,11 +1007,18 @@ export const AppService = {
 
     if (isSupabaseConfigured && supabase && supabaseTablesExist) {
       try {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('eventos')
           .insert([newEvent])
           .select()
           .single();
+        if (error && isMissingNewTimeColumn(error.message)) {
+          ({ data, error } = await supabase
+            .from('eventos')
+            .insert([withoutNewTimeColumns(newEvent)])
+            .select()
+            .single());
+        }
         if (!error) return data as Event;
         // Error explícito de Supabase (RLS, columna faltante, etc.) - no es de conexión.
         // Hay que avisarle al admin en vez de guardar solo en local (produciría un id "undefined" en el link).
@@ -1019,12 +1040,20 @@ export const AppService = {
   async updateEvent(id: string, updatedFields: Partial<Omit<Event, 'id' | 'created_at' | 'created_by'>>): Promise<Event | null> {
     if (isSupabaseConfigured && supabase && supabaseTablesExist) {
       try {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('eventos')
           .update(updatedFields)
           .eq('id', id)
           .select()
           .single();
+        if (error && isMissingNewTimeColumn(error.message)) {
+          ({ data, error } = await supabase
+            .from('eventos')
+            .update(withoutNewTimeColumns(updatedFields))
+            .eq('id', id)
+            .select()
+            .single());
+        }
         if (!error) return data as Event;
         console.error('Error updating event in Supabase:', error);
         throw new Error(error.message || 'No se pudo actualizar la invitación en Supabase.');
@@ -2109,7 +2138,8 @@ CREATE TABLE IF NOT EXISTS public.eventos (
     church_name TEXT,
     church_address TEXT,
     church_maps_url TEXT,
-    cover_type TEXT CHECK (cover_type IN ('image', 'video')) DEFAULT 'image',
+    ceremony_time TIME WITHOUT TIME ZONE,
+    reception_time TIME WITHOUT TIME ZONE,    cover_type TEXT CHECK (cover_type IN ('image', 'video')) DEFAULT 'image',
     cover_url TEXT,
     gallery_urls TEXT[] DEFAULT '{}',
     music_url TEXT,
@@ -2426,6 +2456,8 @@ ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS dress_code_note TEXT;
 ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS gift_registry JSONB DEFAULT '[]';
 ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS itinerary JSONB DEFAULT '[]';
 ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS restrictions_note TEXT;
+ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS ceremony_time TIME WITHOUT TIME ZONE;
+ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS reception_time TIME WITHOUT TIME ZONE;
 ALTER TABLE public.eventos ADD COLUMN IF NOT EXISTS slug TEXT;
 -- Link público legible (ej. #event/cumple-luciana-a3f9) - único pero permite NULL en eventos viejos sin slug
 CREATE UNIQUE INDEX IF NOT EXISTS eventos_slug_unique_idx ON public.eventos(slug) WHERE slug IS NOT NULL;

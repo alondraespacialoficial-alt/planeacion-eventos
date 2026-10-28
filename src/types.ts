@@ -10,7 +10,9 @@ export interface Event {
   slug?: string; // identificador legible para el link público (ej. "cumple-luciana-a3f9"), generado una sola vez al crear el evento
   description: string;
   date: string;
-  time: string;
+  time: string; // hora general del evento (compatibilidad y cuenta regresiva)
+  ceremony_time?: string; // hora de la ceremonia religiosa (opcional)
+  reception_time?: string; // hora de la recepción (opcional)
   location_name: string;
   location_address: string;
   map_embed_url: string;

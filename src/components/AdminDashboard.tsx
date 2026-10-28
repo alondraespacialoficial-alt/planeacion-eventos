@@ -131,7 +131,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
   const [evtDescription, setEvtDescription] = useState('');
   const [evtDate, setEvtDate] = useState('');
   const [evtTime, setEvtTime] = useState('');
-  const [evtLocationName, setEvtLocationName] = useState('');
+  const [evtCeremonyTime, setEvtCeremonyTime] = useState('');
+  const [evtReceptionTime, setEvtReceptionTime] = useState('');  const [evtLocationName, setEvtLocationName] = useState('');
   const [evtLocationAddress, setEvtLocationAddress] = useState('');
   const [evtChurchName, setEvtChurchName] = useState('');
   const [evtChurchAddress, setEvtChurchAddress] = useState('');
@@ -418,6 +419,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     setEvtDescription('');
     setEvtDate('');
     setEvtTime('');
+    setEvtCeremonyTime('');
+    setEvtReceptionTime('');
     setEvtLocationName('');
     setEvtLocationAddress('');
     setEvtChurchName('');
@@ -447,7 +450,8 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     setEvtDescription(evt.description);
     setEvtDate(evt.date);
     setEvtTime(evt.time);
-    setEvtLocationName(evt.location_name);
+    setEvtCeremonyTime((evt.ceremony_time || '').slice(0, 5));
+    setEvtReceptionTime((evt.reception_time || '').slice(0, 5));    setEvtLocationName(evt.location_name);
     setEvtLocationAddress(evt.location_address);
     setEvtChurchName(evt.church_name || '');
     setEvtChurchAddress(evt.church_address || '');
@@ -481,11 +485,22 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
     }
 
     try {
+      // Las columnas nuevas solo se envían si tienen valor o ya existen en el evento, para no fallar si la migración aún no se aplicó.
+      const existingEvent = editingEventId ? events.find(ev => ev.id === editingEventId) : undefined;
+      const optionalTimes: Partial<Pick<Event, 'ceremony_time' | 'reception_time'>> = {};
+      if (evtCeremonyTime || (existingEvent && 'ceremony_time' in existingEvent)) {
+        optionalTimes.ceremony_time = (evtCeremonyTime || null) as string;
+      }
+      if (evtReceptionTime || (existingEvent && 'reception_time' in existingEvent)) {
+        optionalTimes.reception_time = (evtReceptionTime || null) as string;
+      }
+
       const payload = {
         title: evtTitle,
         description: evtDescription,
         date: evtDate,
         time: evtTime,
+        ...optionalTimes,
         location_name: evtLocationName,
         location_address: evtLocationAddress,
         church_name: evtChurchName.trim(),
@@ -2950,12 +2965,24 @@ export default function AdminDashboard({ currentUser, onLogout, onNavigate }: Ad
                   <input type="date" required value={evtDate} onChange={(e) => setEvtDate(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" />
                 </div>
                 <div>
-                  <label className="block font-mono text-gray-400 mb-1">HORA *</label>
+                  <label className="block font-mono text-gray-400 mb-1">HORA GENERAL DEL EVENTO *</label>
                   <input type="time" required value={evtTime} onChange={(e) => setEvtTime(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" />
+                  <p className="text-[10px] text-gray-500 mt-1">Base de la cuenta regresiva.</p>
                 </div>
                 <div>
                   <label className="block font-mono text-gray-400 mb-1">LÍMITE RSVP *</label>
                   <input type="date" required value={evtRsvpDeadline} onChange={(e) => setEvtRsvpDeadline(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" />
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-mono text-gray-400 mb-1">HORA DE CEREMONIA (OPCIONAL)</label>
+                  <input type="time" value={evtCeremonyTime} onChange={(e) => setEvtCeremonyTime(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" />
+                </div>
+                <div>
+                  <label className="block font-mono text-gray-400 mb-1">HORA DE RECEPCIÓN (OPCIONAL)</label>
+                  <input type="time" value={evtReceptionTime} onChange={(e) => setEvtReceptionTime(e.target.value)} className="w-full bg-black/40 border border-gray-800 rounded p-2.5 text-white" />
                 </div>
               </div>
 

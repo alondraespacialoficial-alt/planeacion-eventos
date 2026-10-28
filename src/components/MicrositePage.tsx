@@ -32,6 +32,9 @@ import {
 } from 'lucide-react';
 import { Event, RSVP } from '../types';
 import { AppService } from '../lib/supabase';
+import { formatTime12h } from '../lib/time';
+import { getVisibleSections } from '../lib/sectionNav';
+import SectionNav from './SectionNav';
 
 // Convierte un link normal de Spotify (track/album/playlist/episode) en la URL de su reproductor embebible oficial.
 // Spotify no expone un archivo de audio directo, por eso un <audio src> no funciona con estos links.
@@ -218,6 +221,14 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
   const churchMapsUrl = /^https?:\/\//i.test(event.church_maps_url?.trim() || '')
     ? event.church_maps_url!.trim()
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${event.church_name || ''} ${event.church_address || ''}`.trim())}`;
+  const ceremonyTime = formatTime12h(event.ceremony_time);
+  // Eventos anteriores sin horarios nuevos conservan su hora general como hora de recepción.
+  const receptionTime = formatTime12h(event.reception_time) ?? (event.ceremony_time ? null : formatTime12h(event.time));
+  const sections = getVisibleSections({
+    hasGallery: !!(event.gallery_urls && event.gallery_urls.length > 0),
+    hasCeremony: hasChurch,
+    hasItinerary: !!(event.itinerary && event.itinerary.length > 0)
+  });
   // Links normales de Google Maps (no de la API de Embed) son rechazados al intentar iframearlos ("google.com rechazó la conexión")
   const isValidMapEmbedUrl = !!event.map_embed_url && event.map_embed_url.includes('/maps/embed');
 
@@ -239,7 +250,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
       )}
 
       {/* Dynamic Cover Asset (Image or Video) */}
-      <section className="h-screen w-full relative flex items-center justify-center overflow-hidden">
+      <section id="hero" className="h-screen w-full relative flex items-center justify-center overflow-hidden">
         {event.cover_type === 'video' ? (
           <video 
             autoPlay 
@@ -324,12 +335,18 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
               "{event.description}"
             </p>
 
-            <a 
-              href="#ceremony-details"
+            <button
+              type="button"
+              aria-label="Siguiente sección"
+              onClick={() => {
+                const next = sections[1];
+                const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                document.getElementById(next)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+              }}
               className="inline-flex items-center justify-center p-3 rounded-full border border-amber-500/20 hover:border-amber-500 text-amber-400 bg-amber-500/5 hover:bg-amber-500/10 transition-all text-xs tracking-widest font-mono"
             >
-              <ChevronDown className="w-5 h-5 animate-bounce" />
-            </a>
+              <ChevronDown className="w-5 h-5 motion-safe:animate-bounce" />
+            </button>
           </motion.div>
         </div>
       </section>
@@ -358,6 +375,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
               </div>
             ))}
           </div>
+          <SectionNav sections={sections} current="our-story" className="mt-10" />
         </section>
       )}
 
@@ -365,8 +383,9 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
       <section id="ceremony-details" className="max-w-4xl mx-auto px-6 py-20 relative">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-[1px] bg-gradient-to-r from-transparent via-amber-500/30 to-transparent"></div>
         
+        <div id="date">
         {/* Countdown component */}
-        <div className="mb-20 text-center">
+        <div className="mb-12 text-center">
           <p className="text-[10px] tracking-[0.3em] font-mono text-gray-500 uppercase mb-6">CUENTA REGRESIVA PARA EL EVENTO</p>
           <div className="grid grid-cols-4 gap-3 max-w-md mx-auto">
             <div className="bg-[#121317]/80 border border-gray-800/80 p-4 rounded-xl">
@@ -388,8 +407,8 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
           </div>
         </div>
 
-        {/* Date, Time, Venue card */}
-        <div className="grid md:grid-cols-2 gap-8 mb-16">
+        {/* Date card */}
+        <div className="mb-6">
           <div className="p-8 rounded-2xl border border-gray-800 bg-[#0e1013]/90 backdrop-blur-md flex flex-col justify-between">
             <div>
               <div className="h-10 w-10 rounded-full bg-amber-500/5 border border-amber-500/15 flex items-center justify-center text-amber-400 mb-6">
@@ -409,31 +428,14 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
                   day: 'numeric' 
                 })}
               </p>
-              <p className="font-mono text-xs text-amber-400 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5" />
-                A las {event.time} hrs
-              </p>
-            </div>
-          </div>
-
-          <div className="p-8 rounded-2xl border border-gray-800 bg-[#0e1013]/90 backdrop-blur-md flex flex-col justify-between">
-            <div>
-              <div className="h-10 w-10 rounded-full bg-amber-500/5 border border-amber-500/15 flex items-center justify-center text-amber-400 mb-6">
-                <MapPin className="w-5 h-5" />
-              </div>
-              <h3 className="font-serif text-xl text-white mb-2">Dónde</h3>
-              <p className="text-gray-400 text-sm font-light leading-relaxed mb-4">
-                El evento se llevará a cabo en una locación excepcional equipada con todas las comodidades.
-              </p>
-            </div>
-            <div className="border-t border-gray-800/80 pt-4 mt-6">
-              <p className="font-serif text-lg text-white font-medium mb-1">{event.location_name}</p>
-              <p className="text-xs text-gray-500 leading-relaxed font-sans">{event.location_address}</p>
             </div>
           </div>
         </div>
+        <SectionNav sections={sections} current="date" className="mb-12" />
+        </div>
 
         {hasChurch && (
+          <div id="ceremony" className="mb-12">
           <div className="p-8 rounded-2xl border border-gray-800 bg-[#0e1013]/90 backdrop-blur-md mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
             <div>
               <div className="h-10 w-10 rounded-full bg-amber-500/5 border border-amber-500/15 flex items-center justify-center text-amber-400 mb-4">
@@ -442,6 +444,12 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
               <h3 className="font-serif text-xl text-white mb-2">Ceremonia religiosa</h3>
               {event.church_name && <p className="font-serif text-lg text-white font-medium mb-1">{event.church_name}</p>}
               {event.church_address && <p className="text-xs text-gray-500 leading-relaxed font-sans">{event.church_address}</p>}
+              {ceremonyTime && (
+                <p className="font-mono text-xs text-amber-400 flex items-center gap-1.5 mt-3">
+                  <Clock className="w-3.5 h-3.5" />
+                  {ceremonyTime}
+                </p>
+              )}
             </div>
             <a
               href={churchMapsUrl}
@@ -453,9 +461,30 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
               VER IGLESIA EN MAPS
             </a>
           </div>
+          <SectionNav sections={sections} current="ceremony" />
+          </div>
         )}
 
+        <div id="reception" className="mb-12">
+          <div className="p-8 rounded-2xl border border-gray-800 bg-[#0e1013]/90 backdrop-blur-md mb-6">
+            <div className="h-10 w-10 rounded-full bg-amber-500/5 border border-amber-500/15 flex items-center justify-center text-amber-400 mb-4">
+              <MapPin className="w-5 h-5" />
+            </div>
+            <h3 className="font-serif text-xl text-white mb-2">Recepción</h3>
+            <p className="font-serif text-lg text-white font-medium mb-1">{event.location_name}</p>
+            <p className="text-xs text-gray-500 leading-relaxed font-sans">{event.location_address}</p>
+            {receptionTime && (
+              <p className="font-mono text-xs text-amber-400 flex items-center gap-1.5 mt-3">
+                <Clock className="w-3.5 h-3.5" />
+                {receptionTime}
+              </p>
+            )}
+          </div>
+          <SectionNav sections={sections} current="reception" />
+        </div>
+
         {/* Location Map */}
+        <div id="location">
         <div className="rounded-2xl overflow-hidden border border-gray-800 bg-[#0e1013] shadow-2xl relative">
           <div className="p-4 bg-black/40 border-b border-gray-800/80 flex items-center justify-between">
             <span className="font-mono text-[10px] tracking-widest text-gray-400 uppercase flex items-center gap-2">
@@ -516,6 +545,8 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
             )}
           </div>
         </div>
+        <SectionNav sections={sections} current="location" className="mt-6" />
+        </div>
       </section>
 
       {/* Itinerary */}
@@ -535,6 +566,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
               </div>
             ))}
           </div>
+          <SectionNav sections={sections} current="itinerary" className="mt-8" />
         </section>
       )}
 
@@ -672,7 +704,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
                       </div>
                       <div>
                         <p className="text-[9px] text-gray-500 uppercase">HORARIO</p>
-                        <p className="text-white font-medium">{event.time} HRS</p>
+                        <p className="text-white font-medium">{formatTime12h(event.time) ?? event.time}</p>
                       </div>
                       <div className="col-span-2">
                         <p className="text-[9px] text-gray-500 uppercase">LUGAR</p>
@@ -908,6 +940,7 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
             </form>
           )}
         </div>
+        <SectionNav sections={sections} current="rsvp-section" className="mt-8" />
       </section>
 
       {/* Legal Dialog Overlay */}
