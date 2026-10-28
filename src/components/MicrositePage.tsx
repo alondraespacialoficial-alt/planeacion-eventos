@@ -446,10 +446,13 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
               {event.church_name && <p className="font-serif text-lg text-white font-medium mb-1">{event.church_name}</p>}
               {event.church_address && <p className="text-xs text-gray-500 leading-relaxed font-sans">{event.church_address}</p>}
               {ceremonyTime && (
-                <p className="font-mono text-xs text-amber-400 flex items-center gap-1.5 mt-3">
-                  <Clock className="w-3.5 h-3.5" />
-                  {ceremonyTime}
-                </p>
+                <div className="mt-4 flex flex-col gap-1">
+                  <span className="font-mono text-[10px] tracking-widest text-gray-500">HORA DE LA CEREMONIA</span>
+                  <p className="font-mono text-xs text-amber-400 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 shrink-0" />
+                    {ceremonyTime}
+                  </p>
+                </div>
               )}
             </div>
             <a
@@ -475,10 +478,13 @@ export default function MicrositePage({ eventId, onNavigate }: MicrositePageProp
             <p className="font-serif text-lg text-white font-medium mb-1">{event.location_name}</p>
             <p className="text-xs text-gray-500 leading-relaxed font-sans">{event.location_address}</p>
             {receptionTime && (
-              <p className="font-mono text-xs text-amber-400 flex items-center gap-1.5 mt-3">
-                <Clock className="w-3.5 h-3.5" />
-                {receptionTime}
-              </p>
+              <div className="mt-4 flex flex-col gap-1">
+                <span className="font-mono text-[10px] tracking-widest text-gray-500">HORA DE RECEPCIÓN</span>
+                <p className="font-mono text-xs text-amber-400 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 shrink-0" />
+                  {receptionTime}
+                </p>
+              </div>
             )}
           </div>
           <SectionNav sections={sections} current="reception" />
